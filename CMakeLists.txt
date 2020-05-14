@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(display_image)
+project(color_retrieval)
 find_package(OpenCV REQUIRED)
-add_executable(display_image display_image.cpp )
-target_link_libraries(display_image ${OpenCV_LIBS})
+add_executable(color_retrieval color_retrieval.cpp )
+target_link_libraries(color_retrieval ${OpenCV_LIBS})
