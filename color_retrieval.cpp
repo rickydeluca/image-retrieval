@@ -7,58 +7,110 @@
 using namespace cv;
 using namespace std;
 
-// retrival by colour
-// confront three image and return the two most similar
-Mat compareColorSpace(Mat img, Mat img2, Mat img3) {
-	// extract RGB values from the img
-	Vec3b img_color_space = img.at<Vec3b>(y, x);
-	uchar img_blue 	= img_color_space.val[0];
-	uchar img_green = img_color_space.val[1];
-	uchar img_red 	= img_color_space.val[2];
+Mat compareColorSpace(Mat img, String img_database_path) {
+	// convert rgb to hsv
+	Mat hsv_img;
+	cvtColor(img, hsv_img, cv.COLOR_BGR2HSV);
 
-	Vec3b img2_color_space = img2.at<Vec3b>(y, x);
-	uchar img2_blue  = img2_color_space.val[0];
-	uchar img2_green = img2_color_space.val[1];
-	uchar img2_red 	 = img2_color_space.val[2];
+	// quantify hsv histogram
+	Mat hsv_planes[3];
+	split(hsv_img, hsv_planes); // separete the h, s, v channels
+	Mat h_plane = hsv_planes[0];
+	Mat s_plane = hsv_planes[1];
+	Mat v_plane = hsv_planes[2];
 
-	Vec3b img3_color_space = img3.at<Vec3b>(y, x);
-	uchar img3_blue  = img3_color_space.val[0];
-	uchar img3_green = img3_color_space.val[1];
-	uchar img3_red 	 = img3_color_space.val[2];
+	Mat hsv_quantified[3];
+	int x, y;
+	for (x = 0; x < hsv_img.height; x++) {
+		for (y = 0; y < hsv_img.width; y++) {
+			Vec3f h_value = h_plane.at<Vec3f>(y, x);
+			
+			if (h_value >= 316 && h_value <= 360) {
+				hsv_quantified[0].at<Vec3f>(y, x) = 0;
+			}
 
-	// confront the 3 images and return the most similar to the first image
-	uchar dist_red_1_2   = abs(img_red, img2_red);
-	uchar dist_green_1_2 = abs(img_green, img2_green);
-	uchar dist_blue_1_2  = abs(img_blue, img2_blue);
+			else if (h_value >= 1 && h_value <= 25) {
+				hsv_quantified[0].at<Vec3f>(y, x) = 1;
+			}
 
-	uchar color_distance_1_2 = abs(dist_red_1_2, dist_green_1_2, dist_blue_1_2);
+			else if (h_value >= 26 && h_value <= 40) {
+				hsv_quantified[0].at<Vec3f>(y, x) = 2;
+			}
 
-	uchar dist_red_1_3   = abs(img_red, img3_red);
-	uchar dist_green_1_3 = abs(img_green, img3_green);
-	uchar dist_blue_1_3  = abs(img_blue, img3_blue);
+			else if (h_value >= 41 && h_value <= 120) {
+				hsv_quantified[0].at<Vec3f>(y, x) = 3;
+			}
 
-	uchar color_distance_1_3 = abs(dist_red_1_3, dist_green_1_3, dist_blue_1_3);
+			else if (h_value >= 121 && h_value <= 190) {
+				hsv_quantified[0].at<Vec3f>(y, x) = 4;
+			}
 
-	if (color_distance_1_2 < color_distance_1_3)
-		return img2;
-	else
-		return img3;
+			else if (h_value >= 191 && h_value <= 270) {
+				hsv_quantified[0].at<Vec3f>(y, x) = 5;
+			}
+
+			else if (h_value >= 271 && h_value <= 295) {
+				hsv_quantified[0].at<Vec3f>(y, x) = 6;
+			}
+
+			else if (h_value >= 296 && h_value <= 315) {
+				hsv_quantified[0].at<Vec3f>(y, x) = 7;
+			}
+
+			Vec3f s_value = s_plane.at<Vec3f>(y, x);
+
+			if (s_value >= 0 && s_value < 0.2) {
+				hsv_quantified[1].at<Vec3f>(y, x) = 0;
+			}
+
+			else if (s_value >= 0.2 && s_value < 0.7) {
+				hsv_quantified[1].at<Vec3f>(y, x) = 2;
+			}
+
+			else if (s_value >= 0.7 && s_value <= 1) {
+				hsv_quantified[1].at<Vec3f>(y, x) = 3;
+			}
+
+			Vec3f v_value = v_plane.at<Vec3f>(y, x);
+
+			if (v_value >= 0 && v_value < 0.2) {
+				hsv_quantified[2].at<Vec3f>(y, x) = 0;
+			}
+
+			else if (v_value >= 0.2 && v_value < 0.7) {
+				hsv_quantified[2].at<Vec3f>(y, x) = 2;
+			}
+
+			else if (v_value >= 0.7 && v_value <= 1) {
+				hsv_quantified[2].at<Vec3f>(y, x) = 3;
+			}
+
+		} 
+	}
+
+	// scan the database convert each image 
 }
 
-int main (int argc, char** argv) {
-	// read 3 images from database
-	Mat img  = imread("image_database/img_017.JPG", IMREAD_COLOR);	// kiki 1
-	Mat img2 = imread("image_database/img_001.JPG", IMREAD_COLOR);	// ball
-	Mat img3 = imread("image_database/img_018.JPG", IMREAD_COLOR);	// kiki 2
 
-	Mat match_img = compareColorSpace(img, img2, img3); // expect it return img3
+int main (int argc, char** argv) {
+	// read an image and display the red channel
+	String img_database_path =  "image_database/";
+	Mat img = imread("image_database/img_017.JPG", IMREAD_COLOR);
+
+	// resize image
+	Size size(800, 600);
+	resize(img, img, size);
+
+	Mat planes[3];
+	split(img, planes);
+
+	// convert rgb to hsv
+	Mat hsv_img;
+	cvtColor(img, hsv_img, COLOR_BGR2HSV);
 
 	// dispalay images
     namedWindow("Display Image", WINDOW_AUTOSIZE);
-    imshow("Display window", img);
-
-    namedWindow("Display Image", WINDOW_AUTOSIZE);
-    imshow("Display window", match_img);
+    imshow("Display window", planes[2]);
 
     // wait for a keystroke in the window
     int k = waitKey(0);
