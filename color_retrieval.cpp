@@ -21,25 +21,6 @@ double compareColorSpace(Mat img, String img_database_path, int (&most_similar_i
 	Mat s0 = channels[1];
 	Mat v0 = channels[2];
 
-	/*
-	// quantify hsv histogram using inRange
-	Mat img_threshold;
-
-	// first set
-	int low_h  = 157;
-	int high_h = 179;
-
-	int low_s  = 0;
-	int high_s = 51;
-
-	int low_v  = 0;
-	int high_v = 51;
-
-	inRange(hsv_img, Scalar(low_h, low_s, low_v), Scalar(high_h, high_s, high_v), img_threshold);
-
-	return img_threshold;
-	*/
-
 	// read the images from database
 	VideoCapture cap("/home/rickydeluca/Scrivania/università/tesi/image_retrieval/image_database/img_%3d.JPG"); // %3d means 001.JPG notation
 	if (!cap.isOpened()) 			// check if succeeded
@@ -65,17 +46,17 @@ double compareColorSpace(Mat img, String img_database_path, int (&most_similar_i
 		s1 = database_channels[1];
 		v1 = database_channels[2];
 
-		// compute euclidian distance between img and database_img
-		// dh = min(abs(h1-h0), 179 - abs(h1-h0));
-		// ds = abs(s1-s0);
-		// dv = abs(v1-v0);
-		// dh = min(norm(h1-h0), 179 - norm(h1-h0));
-		dh = norm(h1-h0);
-		ds = norm(s1-s0);
-		dv = norm(v1-v0);
+		// compute euclidian distance between img and database_img		
+		// dh = norm(h1-h0);
+		// ds = norm(s1-s0);
+		// dv = norm(v1-v0);
 
-		gcs_distance = sqrt(dh*dh + ds*ds + dv*dv);
-		printf("Computed distance %d: %f\n", i, gcs_distance);
+		dh = norm(abs(h1 - h0), NORM_L2);
+		ds = norm(abs(s1 - s0), NORM_L2);
+		dv = norm(abs(v1 - v0), NORM_L2);
+
+		gcs_distance = sqrt(dh + ds + dv);
+		printf("Computed distance %d: %f\n", i, dh);
 
 		// insert found distance in distance_array
 		distance_array[i] = gcs_distance;
@@ -107,7 +88,7 @@ double compareColorSpace(Mat img, String img_database_path, int (&most_similar_i
 int main (int argc, char** argv) {
 	const int SIMILAR_IMGS_ARRAY_SIZE = 5;
 	String img_database_path =  "image_database/";
-	Mat img = imread("image_database/img_016.JPG", IMREAD_COLOR); // happy kiki
+	Mat img = imread("image_database/img_015.JPG", IMREAD_COLOR); // skate
 
 	// resize the image
 	Size size(800, 600);
@@ -131,7 +112,7 @@ int main (int argc, char** argv) {
 	for (i = 0; i < SIMILAR_IMGS_ARRAY_SIZE; i++) {
 		img_idx = most_similar_imgs_idx_array[i];
 		similar_img_path = "";
-		if (img_idx < 9) { 
+		if (img_idx <= 9) { 
 			printf("img_00%d.JPG\n", img_idx);
 
 			similar_img_path = img_database_path + "img_00" + to_string(img_idx) + ".JPG";
