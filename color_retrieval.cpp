@@ -9,7 +9,7 @@
 using namespace cv;
 using namespace std;
 
-double compareColorSpace(Mat img, String img_database_path, int (&most_similar_imgs_idx_array)[5]) {
+int compareColorSpace(Mat img, String img_database_path, int (&most_similar_imgs_idx_array)[5]) {
 	// convert rgb to hsv
 	Mat hsv_img;
 	cvtColor(img, hsv_img, COLOR_BGR2HSV);
@@ -88,7 +88,7 @@ double compareColorSpace(Mat img, String img_database_path, int (&most_similar_i
 int main (int argc, char** argv) {
 	const int SIMILAR_IMGS_ARRAY_SIZE = 5;
 	String img_database_path =  "image_database/";
-	Mat img = imread("image_database/img_015.JPG", IMREAD_COLOR); // skate
+	Mat img = imread("image_database/img_015.JPG", IMREAD_COLOR); // happy kiki :)
 
 	// resize the image
 	Size size(800, 600);
@@ -103,7 +103,7 @@ int main (int argc, char** argv) {
 
 	printf("Calling compareColorSpace\n\n");
 	int most_similar_imgs_idx_array[SIMILAR_IMGS_ARRAY_SIZE] = {0};
-	double ret = compareColorSpace(img, img_database_path, most_similar_imgs_idx_array);
+	int ret = compareColorSpace(img, img_database_path, most_similar_imgs_idx_array);
 
 	printf("Showing top 5 most similar images\n\n");
 	int i;
@@ -123,6 +123,7 @@ int main (int argc, char** argv) {
     		imshow("Display window", similar_img);
 			k = waitKey(0);
 		}
+
 		else {
 			printf("img_0%d.JPG\n", img_idx);
 
