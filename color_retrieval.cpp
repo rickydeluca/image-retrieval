@@ -244,7 +244,6 @@ int main (int argc, char** argv) {
 	return 0;
 	
 	// *** TEST GLOBAL COLOR SPACE ***
-	/*
 	printf("Compare global color space...\n\n");
 	int most_similar_imgs_idx_array[N_SIM_IMGS] = {0};
 	int ret = compareColorSpace(img, img_database_path, most_similar_imgs_idx_array);
@@ -280,7 +279,7 @@ int main (int argc, char** argv) {
 			k = waitKey(0);
 		}
 	}
-	*/
+	
 
 	// *** TEST BLOCK COLOR SPACE ***
 	/*
