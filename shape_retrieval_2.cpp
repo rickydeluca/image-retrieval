@@ -12,7 +12,14 @@ using namespace cv;
 const int DATABASE_SIZE = 62;
 const int N_SIM_IMGS = 3;
 
+int thresh = 100;
+int max_thresh = 255;
+
 Mat query, database_img;
+Mat canny_query, canny_database_img;
+Mat thresh_query, thresh_database_img;
+vector<vector<Point>> cont_query, cont_database_img;
+vector<Vec4i> hierarchy_query, hierarchy_database_img;
 
 float dist_array[DATABASE_SIZE] = {0};
 float sorted_array[DATABASE_SIZE] = {0};
@@ -58,6 +65,8 @@ void showSimShapes() {
 
 /** @function main */
 int main( int argc, char** argv ) {
+    double ret;
+
     // Load an image
     query = imread( "./image_database/img_004.JPG" );
 
@@ -76,6 +85,14 @@ int main( int argc, char** argv ) {
     namedWindow("Display Image", WINDOW_AUTOSIZE);
     imshow("Display window", query);
 	int k = waitKey(0);
+
+    // Detect edges using canny
+    // Canny(query, canny_query, thresh, thresh*2, 3);
+    // printf("Sono dopo Canny 1\n");
+    // Find contours
+    threshold(query, thresh_query, 127, 255, 0);
+    findContours(thresh_query, cont_query, hierarchy_query, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
+    printf("Sono dopo Find Contours 1\n");
 
     // Read images from database
     VideoCapture cap("./image_database/img_%3d.JPG"); // %3d means 00x.JPG notation
@@ -101,8 +118,16 @@ int main( int argc, char** argv ) {
     	imshow("Display window", database_img);
 		k = waitKey(1);
 
+        // Detect edges using canny
+        // Canny(database_img, canny_database_img, thresh, thresh*2, 3);
+        // printf("Sono dopo Canny 2\n");
+        threshold(img_database, thresh_database_img, 127, 255, 0);
+        // Find contours
+        findContours(thresh_database_img, cont_database_img, hierarchy_database_img, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
+        printf("Sono dopo Find Contours 2\n");
+
         // Compute distance between shapes
-        dist = matchShapes(query, database_img, CONTOURS_MATCH_I1, 0);
+        dist = matchShapes(hierarchy_query, hierarchy_database_img, CONTOURS_MATCH_I1, 0);
         printf("Shape distance from image %3d: %f\n", i+1, dist);
 
         // Insert distances in the array
