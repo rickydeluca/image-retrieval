@@ -10,45 +10,56 @@ using namespace std;
 using namespace cv;
 
 const int DATABASE_SIZE = 62;
+const int N_SIM_IMGS = 3;
 
 Mat query, database_img;
-vector<Point> contQuery, contDatabaseImg;
 
-/**
- * @function simpleContour
- */
-static vector<Point> simpleContour( const Mat& currentQuery, int n=300 )
-{
-    vector<vector<Point> > _contoursQuery;
-    vector <Point> contoursQuery;
-    findContours(currentQuery, _contoursQuery, RETR_LIST, CHAIN_APPROX_NONE);
-    for (size_t border=0; border<_contoursQuery.size(); border++)
-    {
-        for (size_t p=0; p<_contoursQuery[border].size(); p++)
-        {
-            contoursQuery.push_back( _contoursQuery[border][p] );
-        }
+float dist_array[DATABASE_SIZE] = {0};
+float sorted_array[DATABASE_SIZE] = {0};
+int idx_array[N_SIM_IMGS] = {0};
+
+/** @funtion showSimShapes */
+void showSimShapes() {
+    printf("Show top %d most similar images\n\n", N_SIM_IMGS);
+
+	int i, k;
+	int img_idx;
+	String similar_img_path = "";
+    Size size(800,600);
+
+	for (i = 0; i < N_SIM_IMGS; i++) {
+		img_idx = idx_array[i];
+		similar_img_path = "";
+		if (img_idx <= 9) { 
+			printf("img_00%d.JPG\n", img_idx);
+
+			similar_img_path = "./image_database/img_00" + to_string(img_idx) + ".JPG";
+			Mat similar_img = imread(similar_img_path, IMREAD_COLOR);
+			resize(similar_img, similar_img, size);
+
+			namedWindow("Display Image", WINDOW_AUTOSIZE);
+    		imshow("Display window", similar_img);
+			k = waitKey(0);
+		}
+
+		else {
+			printf("img_0%d.JPG\n", img_idx);
+
+			similar_img_path = "./image_database/img_0" + to_string(img_idx) + ".JPG";
+			Mat similar_img = imread(similar_img_path, IMREAD_COLOR);
+			resize(similar_img, similar_img, size);
+
+			namedWindow("Display Image", WINDOW_AUTOSIZE);
+    		imshow("Display window", similar_img);
+			k = waitKey(0);
+		}
     }
-    // In case actual number of points is less than n
-    int dummy=0;
-    for (int add=(int)contoursQuery.size()-1; add<n; add++)
-    {
-        contoursQuery.push_back(contoursQuery[dummy++]); // Adding dummy values
-    }
-    // Uniformly sampling
-    cv::randShuffle(contoursQuery);
-    vector<Point> cont;
-    for (int i=0; i<n; i++)
-    {
-        cont.push_back(contoursQuery[i]);
-    }
-    return cont;
 }
 
 /** @function main */
 int main( int argc, char** argv ) {
     // Load an image
-    query = imread( "./image_database/img_014.JPG" );
+    query = imread( "./image_database/img_004.JPG" );
 
     if (!query.data) {
         return -1;
@@ -61,7 +72,7 @@ int main( int argc, char** argv ) {
     // Convert the image to grayscale
     cvtColor(query, query, COLOR_BGR2GRAY);
 
-    // Show database image
+    // Show database image 
     namedWindow("Display Image", WINDOW_AUTOSIZE);
     imshow("Display window", query);
 	int k = waitKey(0);
@@ -71,11 +82,6 @@ int main( int argc, char** argv ) {
 	if (!cap.isOpened()) 							  // check if succeeded
 		return -1;
 
-    // Declare object for use the function computeDistance
-    cv::Ptr <cv::ShapeContextDistanceExtractor> mysc = cv::createShapeContextDistanceExtractor();
-    
-    contQuery = simpleContour(query);
-    
     // Store the distance between shapes
     float dist = 0.0;
 
@@ -93,14 +99,34 @@ int main( int argc, char** argv ) {
         // Show database image
         namedWindow("Display Image", WINDOW_AUTOSIZE);
     	imshow("Display window", database_img);
-		k = waitKey(2);
+		k = waitKey(1);
 
-        // For each image in the database compute the shape distance with the query image
-        contDatabaseImg = simpleContour(database_img);
-        
-        dist = mysc->computeDistance(contDatabaseImg, contQuery);
+        // Compute distance between shapes
+        dist = matchShapes(query, database_img, CONTOURS_MATCH_I1, 0);
         printf("Shape distance from image %3d: %f\n", i+1, dist);
+
+        // Insert distances in the array
+        dist_array[i] = dist;
     }
+
+    // Deep copy of the distance array
+    memcpy(sorted_array, dist_array, sizeof(float)*DATABASE_SIZE);
+
+    // Sort the new distance array
+    int n = sizeof(sorted_array) / sizeof(sorted_array[0]);
+	sort(sorted_array, sorted_array + n);
+
+    // Find index of the most similars shapes to query shape
+	int j;
+	for (i = 0; i < N_SIM_IMGS; i++) {
+		for (j = 0; j < DATABASE_SIZE; j++) {
+			if (sorted_array[i] == dist_array[j])
+				idx_array[i] = j+1;
+		}
+	}
+
+    // Show most similar shapes
+    showSimShapes();
 
     return 0;
 }
