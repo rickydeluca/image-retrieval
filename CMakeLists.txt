@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(color_retrieval)
+project(shape_retrieval_2)
 find_package(OpenCV REQUIRED)
-add_executable(color_retrieval color_retrieval.cpp )
-target_link_libraries(color_retrieval ${OpenCV_LIBS})
+add_executable(shape_retrieval_2 shape_retrieval_2.cpp )
+target_link_libraries(shape_retrieval_2 ${OpenCV_LIBS})
