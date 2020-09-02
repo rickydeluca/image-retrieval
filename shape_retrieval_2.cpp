@@ -12,14 +12,14 @@ using namespace cv;
 const int DATABASE_SIZE = 62;
 const int N_SIM_IMGS = 3;
 
-int thresh = 100;
-int max_thresh = 255;
+// int thresh = 100;
+// int max_thresh = 255;
 
 Mat query, database_img;
-Mat canny_query, canny_database_img;
-Mat thresh_query, thresh_database_img;
-vector<vector<Point>> cont_query, cont_database_img;
-vector<Vec4i> hierarchy_query, hierarchy_database_img;
+// Mat canny_query, canny_database_img;
+// Mat thresh_query, thresh_database_img;
+// vector<vector<Point>> cont_query, cont_database_img;
+// vector<Vec4i> hierarchy_query, hierarchy_database_img;
 
 float dist_array[DATABASE_SIZE] = {0};
 float sorted_array[DATABASE_SIZE] = {0};
@@ -68,7 +68,7 @@ int main( int argc, char** argv ) {
     double ret;
 
     // Load an image
-    query = imread( "./image_database/img_004.JPG" );
+    query = imread("./image_database/img_004.JPG", IMREAD_GRAYSCALE);
 
     if (!query.data) {
         return -1;
@@ -76,23 +76,40 @@ int main( int argc, char** argv ) {
     
     // Resize the image
     Size size(800, 600);
-    resize (query, query, size, 0, 0, INTER_LINEAR_EXACT);
+    resize (query, query, size);
 
-    // Convert the image to grayscale
-    cvtColor(query, query, COLOR_BGR2GRAY);
-
-    // Show database image 
+    // Show the image 
     namedWindow("Display Image", WINDOW_AUTOSIZE);
-    imshow("Display window", query);
+    imshow("Display Image", query);
 	int k = waitKey(0);
 
-    // Detect edges using canny
-    // Canny(query, canny_query, thresh, thresh*2, 3);
-    // printf("Sono dopo Canny 1\n");
+    // Binarize the image using thresholding
+    threshold(query, query, 128, 255, THRESH_BINARY);
+    
+    /** Hu Moments computing - Automized by matchShapes
+    // Calculate Moments
+    Moments query_moments = moments(query, false);
+
+    // Calculate Hu Moments
+    double query_hu_moments[7];
+    HuMoments(query_moments, query_hu_moments);
+
+    // Log scale hu moments
+    int j;
+    for (j = 0; j < 7; j++) {
+        query_hu_moments[j] = -1 * copysign(1.0, query_hu_moments[j]);
+        log10(abs(query_hu_moments[j]));
+    }
+    */
+    /** Detect edges using canny
+    Canny(query, canny_query, thresh, thresh*2, 3);
+    printf("Sono dopo Canny 1\n");
+    
     // Find contours
-    threshold(query, thresh_query, 127, 255, 0);
-    findContours(thresh_query, cont_query, hierarchy_query, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
-    printf("Sono dopo Find Contours 1\n");
+    threshold(query, thresh_query, thresh, thresh*2, 0);
+    findContours(thresh_query, cont_query, 2, 1);
+    // printf("Sono dopo Find Contours 1\n");
+    */
 
     // Read images from database
     VideoCapture cap("./image_database/img_%3d.JPG"); // %3d means 00x.JPG notation
@@ -100,7 +117,7 @@ int main( int argc, char** argv ) {
 		return -1;
 
     // Store the distance between shapes
-    float dist = 0.0;
+    double dist = 0.0;
 
     // Scan the database
     int i;
@@ -109,25 +126,52 @@ int main( int argc, char** argv ) {
         if (!database_img.data) {
             return -1;
         }
-
-        resize(database_img, database_img, size, 0, 0, INTER_LINEAR_EXACT);		// resize the image
-		cvtColor(database_img, database_img, COLOR_BGR2GRAY);                   // convert to grayscale
+        
+        // Resize and convert to grayscale
+        resize(database_img, database_img, size);		        // resize the image
+		cvtColor(database_img, database_img, COLOR_BGR2GRAY);   // convert to grayscale
 
         // Show database image
         namedWindow("Display Image", WINDOW_AUTOSIZE);
-    	imshow("Display window", database_img);
+    	imshow("Display Image", database_img);
 		k = waitKey(1);
 
+        // Binarize the image using thresholding
+        threshold(database_img, database_img, 128, 255, THRESH_BINARY);
+
+        /**
+        // Calculate Moments
+        Moments database_img_moments = moments(database_img, false);
+
+        // Calculate Hu Moments
+        double database_img_hu_moments[7];
+        HuMoments(database_img_moments, database_img_hu_moments);
+
+        // Log scale hu moments
+        for (j = 0; j < 7; j++) {
+            database_img_hu_moments[j] = -1 * copysign(1.0, database_img_hu_moments[j]);
+            log10(abs(query_hu_moments[j]));
+        }
+        */
+
+        /*
         // Detect edges using canny
-        // Canny(database_img, canny_database_img, thresh, thresh*2, 3);
-        // printf("Sono dopo Canny 2\n");
-        threshold(img_database, thresh_database_img, 127, 255, 0);
+        Canny(database_img, canny_database_img, thresh, thresh*2, 3);
+        printf("Sono dopo Canny 2\n");
+        
         // Find contours
-        findContours(thresh_database_img, cont_database_img, hierarchy_database_img, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0));
+        threshold(database_img, thresh_database_img, thresh, thresh*2, 0);
+        findContours(thresh_database_img, cont_database_img, 2, 1);
         printf("Sono dopo Find Contours 2\n");
 
         // Compute distance between shapes
-        dist = matchShapes(hierarchy_query, hierarchy_database_img, CONTOURS_MATCH_I1, 0);
+        // Ptr<ShapeContextDistanceExtractor> sd = createShapeContextDistanceExtractor();
+        // Ptr<HausdorffDistanceExtractor> hd = createHausdorffDistanceExtractor();
+
+        // dist = sd->computeDistance(query, database_img); //, CONTOURS_MATCH_I1, 0);
+        */
+
+        dist = matchShapes(query, database_img, CONTOURS_MATCH_I2, 0);
         printf("Shape distance from image %3d: %f\n", i+1, dist);
 
         // Insert distances in the array
@@ -142,7 +186,7 @@ int main( int argc, char** argv ) {
 	sort(sorted_array, sorted_array + n);
 
     // Find index of the most similars shapes to query shape
-	int j;
+    int j;
 	for (i = 0; i < N_SIM_IMGS; i++) {
 		for (j = 0; j < DATABASE_SIZE; j++) {
 			if (sorted_array[i] == dist_array[j])
