@@ -68,7 +68,7 @@ int main( int argc, char** argv ) {
     double ret;
 
     // Load an image
-    query = imread("./image_database/img_004.JPG", IMREAD_GRAYSCALE);
+    query = imread("./image_database/img_047.JPG", IMREAD_GRAYSCALE);
 
     if (!query.data) {
         return -1;
