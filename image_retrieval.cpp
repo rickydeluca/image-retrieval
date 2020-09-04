@@ -1,12 +1,14 @@
 // Combine color and shape retrieval
+#include <iostream>
+#include <string>
 
 #include "opencv2/shape.hpp"
 #include "opencv2/imgcodecs.hpp"
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include <opencv2/core/utility.hpp>
-#include <iostream>
-#include <string>
+
+#include "image_retrieval.h"
 
 using namespace std;
 using namespace cv;
@@ -141,7 +143,7 @@ int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
         
         // Resize and convert to HSV color space
         resize(database_img, database_img, size);		        // resize the image
-		cvtColor(database_img, database_img, COLOR_BGR2HSV);   // convert to grayscale
+		cvtColor(database_img, database_img, COLOR_BGR2HSV);    // convert to grayscale
 
 		// Split database_img channels
 		split(database_img, database_channels);
