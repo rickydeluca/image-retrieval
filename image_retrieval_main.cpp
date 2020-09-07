@@ -1,8 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-
 #include "image_retrieval.hpp"
+
+using namespace cv;
+using namespace std;
 
 // Global variables
 double shape_dist_array[DATABASE_SIZE]  = {0};
@@ -16,11 +15,22 @@ int main (int argc, char** argv) {
     int i = 0;      // Iter
 
     // Load query image
-    query = imread("./image_database/img_047.JPG", IMREAD_GRAYSCALE);
+    Mat query = imread("./image_database/img_004.JPG");
     if (!query.data) {
         printf("ERROR: Cannot read the query image.\n");
         return -1;
     }
+
+    // Show the image 
+    printf("Showing the query image...\n\n");
+
+    Mat resized_query;
+    Size size(800,600);
+    resize(query, resized_query, size);
+
+    namedWindow("Display Query", WINDOW_AUTOSIZE);
+    imshow("Display Query", resized_query);
+	int k = waitKey(0);
 
     // Compute colors distance
     ret = retrieveColors(query, color_dist_array);
@@ -28,6 +38,8 @@ int main (int argc, char** argv) {
         printf("ERROR: Cannot retrieve colors.\n");
         return -1;
     }
+    
+    printf("\n");
 
     // Compute shape distance
     ret = retrieveShapes(query, shape_dist_array);
@@ -36,7 +48,10 @@ int main (int argc, char** argv) {
         return -1;
     }
 
+    printf("\n");
+
     // Compute the average distance
+    printf("Retrieving the most similar images...\n");
     for (i = 0; i < DATABASE_SIZE; i++) {
         avg_dist_array[i] = color_dist_array[i] * shape_dist_array[i];
     }
@@ -58,6 +73,9 @@ int main (int argc, char** argv) {
 
     // Show most similar shapes
     showSimShapes(idx_array);
+
+    k = waitKey(0);
+    destroyAllWindows();
 
     return 0;
 }

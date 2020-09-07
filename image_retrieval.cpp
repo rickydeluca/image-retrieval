@@ -1,25 +1,11 @@
-// Combine color and shape retrieval
-#include <iostream>
-#include <string>
-
-#include "opencv2/shape.hpp"
-#include "opencv2/imgcodecs.hpp"
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include <opencv2/core/utility.hpp>
-
-#include "image_retrieval.h"
+#include "image_retrieval.hpp"
 
 using namespace std;
 using namespace cv;
 
-// Constants
-// const int DATABASE_SIZE = 62;
-// const int N_SIM_IMGS = 3;
-
 /** @funtion showSimShapes */
 void showSimShapes(int (&idx_array)[N_SIM_IMGS]) {
-    printf("Show top %d most similar images\n\n", N_SIM_IMGS);
+    printf("\nShow top %d most similar images\n\n", N_SIM_IMGS);
 
 	int i, k;
 	int img_idx;
@@ -37,7 +23,7 @@ void showSimShapes(int (&idx_array)[N_SIM_IMGS]) {
 			resize(similar_img, similar_img, size);
 
 			namedWindow("Display Image", WINDOW_AUTOSIZE);
-    		imshow("Display window", similar_img);
+    		imshow("Display Image", similar_img);
 			k = waitKey(0);
 		}
 
@@ -49,7 +35,7 @@ void showSimShapes(int (&idx_array)[N_SIM_IMGS]) {
 			resize(similar_img, similar_img, size);
 
 			namedWindow("Display Image", WINDOW_AUTOSIZE);
-    		imshow("Display window", similar_img);
+    		imshow("Display Image", similar_img);
 			k = waitKey(0);
 		}
     }
@@ -93,7 +79,7 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
 
         // Comparing shapes
         dist = matchShapes(query, database_img, CONTOURS_MATCH_I2, 0);
-            // printf("Shape distance from image %3d: %f\n", i+1, dist);
+        printf("Shape distance from image %3d: %f\n", i+1, dist);
 
         // Insert distances in the array
         shape_dist_array[i] = dist;
@@ -116,7 +102,7 @@ int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
 
     // Split query channels
 	vector<Mat> channels;
-	split(hsv_img, channels);
+	split(query, channels);
 	Mat h0 = channels[0];
 	Mat s0 = channels[1];
 	Mat v0 = channels[2];
@@ -158,7 +144,7 @@ int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
 
         // Get global color space distance
 		dist = norm(dh + ds + dv, NORM_L2);
-		printf("Computed distance %d: %f\n", i, dh);
+		printf("Color distance from %3d: %f\n", i+1, dist);
 
 		// insert found distance in distance_array
 		color_dist_array[i] = dist;
