@@ -14,11 +14,11 @@ using namespace std;
 using namespace cv;
 
 // Constants
-const int DATABASE_SIZE = 62;
-const int N_SIM_IMGS = 3;
+// const int DATABASE_SIZE = 62;
+// const int N_SIM_IMGS = 3;
 
 /** @funtion showSimShapes */
-void showSimShapes() {
+void showSimShapes(int (&idx_array)[N_SIM_IMGS]) {
     printf("Show top %d most similar images\n\n", N_SIM_IMGS);
 
 	int i, k;
