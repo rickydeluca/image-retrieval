@@ -41,15 +41,28 @@ void showSimShapes(int (&idx_array)[N_SIM_IMGS]) {
     }
 }
 
+
+/** @function retrieveDescriptors */
+int retrieveDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
+    // Variables to store descriptors and keypoints
+    Mat query_desc, db_img_desc;
+    vector<KeyPoint> query_kp, db_img_kp;
+
+    // Create detector for ORB descriptors
+    Ptr<ORB> detector = ORB::create();
+
+    // Detect and compute keypoints and descriptors of the query
+    detector->detectAndCompute(query, noArray(), query_kp, query_desc);
+
+    return 0;
+}
+
+
 /** @function retrieveShapes */
 int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
     int i = 0;          // Iter
     double dist = 0.0;  // Store the distance between shapes
     Mat database_img;   // Store the images read from the database
-
-    // Resize the query image
-    Size size(800,600);
-    resize (query, query, size);
 
     // Convert to grayscale
     cvtColor(query, query, COLOR_BGR2GRAY);
@@ -70,9 +83,8 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
             return -1;
         }
         
-        // Resize and convert to grayscale
-        resize(database_img, database_img, size);		        // resize the image
-		cvtColor(database_img, database_img, COLOR_BGR2GRAY);   // convert to grayscale
+        // Convert to grayscale
+		cvtColor(database_img, database_img, COLOR_BGR2GRAY);
 
         // Binarize the image using thresholding
         threshold(database_img, database_img, 128, 255, THRESH_BINARY);
@@ -88,14 +100,11 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
     return 0;
 }
 
+
 /** @function retrieveColors */
 int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
     int i = 0;          // Iter
     Mat database_img;   // Store the images read from the database
-
-    // Resize the query image
-    Size size(800,600);
-    resize (query, query, size);
 
     // Convert to HSV colorspace
     cvtColor(query, query, COLOR_BGR2HSV);
@@ -127,9 +136,8 @@ int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
             return -1;
         }
         
-        // Resize and convert to HSV color space
-        resize(database_img, database_img, size);		        // resize the image
-		cvtColor(database_img, database_img, COLOR_BGR2HSV);    // convert to grayscale
+        // Convert to HSV color space
+		cvtColor(database_img, database_img, COLOR_BGR2HSV);
 
 		// Split database_img channels
 		split(database_img, database_channels);
@@ -147,7 +155,7 @@ int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
 		printf("Color distance from %3d: %f\n", i+1, dist);
 
 		// insert found distance in distance_array
-		color_dist_array[i] = dist;
+		color_dist_array[i] = dist/10000000;
 	}
 
     return 0;
