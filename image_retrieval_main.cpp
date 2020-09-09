@@ -33,7 +33,7 @@ int main (int argc, char** argv) {
     imshow("Display Query", resized_query);
 	int k = waitKey(0);
 
-    // Compute colors distance
+    /* Compute colors distance
     ret = retrieveColors(query, color_dist_array);
     if (ret < 0) {
         printf("ERROR: Cannot retrieve colors.\n");
@@ -41,8 +41,9 @@ int main (int argc, char** argv) {
     }
     
     printf("\n");
-
-    // Compute shape distance
+    */
+   
+    /* Compute shape distance
     ret = retrieveShapes(query, shape_dist_array);
     if (ret < 0) {
         printf("ERROR: Cannot retrieve shapes.\n");
@@ -50,6 +51,7 @@ int main (int argc, char** argv) {
     }
 
     printf("\n");
+    */
 
     // Compute descriptor distance
     ret = retrieveDescriptors(query, desc_dist_array);

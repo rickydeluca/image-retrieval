@@ -83,7 +83,7 @@ int retrieveDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
         orb->detectAndCompute(database_img, noArray(), db_img_kp, db_img_desc);
 
         // Match descriptors
-        matches = bf->match(query_desc, db_img_desc);
+        bf->match(query_desc, db_img_desc, matches);
 
         // Sort descriptors in order of their distances
         sort(matches.begin(), matches.end(), compare_response);
@@ -94,6 +94,7 @@ int retrieveDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
         }
 
         avg_desc_dist = avg_desc_dist / 10;
+        printf("Descriptors distance from image %3d: %f\n", i+1, avg_desc_dist);
 
         // Insert the computet average dist in the array
         desc_dist_array[i] = avg_desc_dist;
