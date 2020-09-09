@@ -20,3 +20,5 @@ void showSimShapes(int (&idx_array)[N_SIM_IMGS]);
 int retrieveShapes(cv::Mat query, double (&shape_dist_array)[DATABASE_SIZE]);
 
 int retrieveColors(cv::Mat query, double (&color_dist_array)[DATABASE_SIZE]);
+
+int retrieveDescriptors(cv::Mat query, double (&desc_dist_array)[DATABASE_SIZE]);
