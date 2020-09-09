@@ -9,6 +9,8 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include <opencv2/core/utility.hpp>
+#include <opencv2/core/types.hpp>
+#include <opencv2/features2d.hpp>
 
 #define DATABASE_SIZE   62
 #define N_SIM_IMGS      3
