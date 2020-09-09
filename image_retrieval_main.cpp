@@ -6,6 +6,7 @@ using namespace std;
 // Global variables
 double shape_dist_array[DATABASE_SIZE]  = {0};
 double color_dist_array[DATABASE_SIZE]  = {0};
+double desc_dist_array[DATABASE_SIZE]   = {0};
 double avg_dist_array[DATABASE_SIZE]    = {0};
 double sorted_array[DATABASE_SIZE]      = {0};
 int idx_array[N_SIM_IMGS]               = {0};
@@ -50,10 +51,20 @@ int main (int argc, char** argv) {
 
     printf("\n");
 
+    // Compute descriptor distance
+    ret = retrieveDescriptors(query, desc_dist_array);
+    if (ret < 0) {
+        printf("ERROR: Cannot retrieve descriptors.\n");
+        return -1;
+    }
+
+    printf("\n");
+
     // Compute the average distance
     printf("Retrieving the most similar images...\n");
     for (i = 0; i < DATABASE_SIZE; i++) {
-        avg_dist_array[i] = color_dist_array[i] * shape_dist_array[i];
+        // avg_dist_array[i] = shape_dist_array[i] * (color_dist_array[i]);
+        avg_dist_array[i] = desc_dist_array[i];
     }
 
     // Sort the avg distance array

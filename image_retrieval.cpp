@@ -41,18 +41,63 @@ void showSimShapes(int (&idx_array)[N_SIM_IMGS]) {
     }
 }
 
+bool compare_response(DMatch first, DMatch second) {
+    if (first.distance < second.distance)
+        return true;
+    
+    else 
+        return false;
+}
 
 /** @function retrieveDescriptors */
 int retrieveDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
-    // Variables to store descriptors and keypoints
-    Mat query_desc, db_img_desc;
-    vector<KeyPoint> query_kp, db_img_kp;
+    Mat database_img;                       // Store the database image
+    Mat query_desc, db_img_desc;            // Store descriptors
+    vector<KeyPoint> query_kp, db_img_kp;   // Store keypoint
+    vector<DMatch> matches;                 // Store the matches between descriptors
+    vector<DMatch>::iterator m_it;          // Iterator for a vector of DMatch
+    double avg_desc_dist = 0;
 
     // Create detector for ORB descriptors
-    Ptr<ORB> detector = ORB::create();
+    Ptr<ORB> orb = ORB::create();
 
     // Detect and compute keypoints and descriptors of the query
-    detector->detectAndCompute(query, noArray(), query_kp, query_desc);
+    orb->detectAndCompute(query, noArray(), query_kp, query_desc);
+
+    // Create BFMatcher object
+    Ptr<BFMatcher> bf = BFMatcher::create(NORM_HAMMING, true);
+
+    // Scan the database
+    VideoCapture cap("./image_database/img_%3d.JPG"); // %3d means 00x.JPG notation
+	if (!cap.isOpened()) 							  // check if succeeded
+		return -1;
+
+    for (int i = 0; i < DATABASE_SIZE; i++) {
+        // Read next image from database
+        cap >> database_img;
+        if (!database_img.data) {
+            return -1;
+        }
+
+        // Detect and compute keypoints and descriptors of the database image
+        orb->detectAndCompute(database_img, noArray(), db_img_kp, db_img_desc);
+
+        // Match descriptors
+        matches = bf->match(query_desc, db_img_desc);
+
+        // Sort descriptors in order of their distances
+        sort(matches.begin(), matches.end(), compare_response);
+
+        // Compute average distance of the firs 10 descriptors
+        for (m_it = matches.begin(); m_it < matches.begin()+10; m_it++) {
+            avg_desc_dist += (*m_it).distance;
+        }
+
+        avg_desc_dist = avg_desc_dist / 10;
+
+        // Insert the computet average dist in the array
+        desc_dist_array[i] = avg_desc_dist;
+    }
 
     return 0;
 }
