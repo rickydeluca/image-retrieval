@@ -49,15 +49,87 @@ bool compare_response(DMatch first, DMatch second) {
     else 
         return false;
 }
+int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
+    Mat database_img;                       // Store the database image
+    Mat query_desc, db_img_desc;            // Store descriptors
+    vector<KeyPoint> query_kp, db_img_kp;   // Store keypoint
+    vector<vector<DMatch>> matches;         // Store the matches between descriptors
+    vector<DMatch>::iterator m_it;          // Iterator for a vector of DMatch
+    vector<DMatch> good_matches;            // Matches that pass the ratio test
+    
+    double avg_desc_dist = 0;           
+    int number_keypoints = 0;
+    const float ratio = 0.6;                // Value for the ratio test
+
+    // Convert query to grayscale
+    cvtColor(query, query, COLOR_BGR2GRAY);
+
+    // Init SIFT detector
+    Ptr<xfeatures2d::SIFT> sift = xfeatures2d::SIFT::create();
+
+    // Detect and compute keypoints and descriptors of the query
+    sift->detectAndCompute(query, noArray(), query_kp, query_desc);
+
+    // Create BFMatcher object with default params: NORM_L2, crossCheck = false
+    Ptr<BFMatcher> bf = BFMatcher::create();
+
+    // Scan the database
+    VideoCapture cap("./image_database/img_%3d.JPG"); // %3d means 00x.JPG notation
+	if (!cap.isOpened()) 							  // check if succeeded
+		return -1;
+
+    for (int i = 0; i < DATABASE_SIZE; i++) {
+        // Read next image from database
+        cap >> database_img;
+        if (!database_img.data) {
+            return -1;
+        }
+
+        // Convert database image to grayscale
+        cvtColor(database_img, database_img, COLOR_BGR2GRAY);
+        
+        // Detect and compute keypoints and descriptors of the database image
+        printf("Before detectAndCompute\n");
+        sift->detectAndCompute(database_img, noArray(), db_img_kp, db_img_desc);
+
+        // Match descriptors
+        printf("Before knnMatch\n");
+        bf->knnMatch(query_desc, db_img_desc, matches, 2);
+        printf("After knnMatch\n");
+
+        // Apply ratio test
+        for (int j = 0; j < matches.size(); j++) {
+            if (matches[i][0].distance < ratio * matches[i][1].distance) {
+                good_matches.push_back(matches[i][0]);
+            }
+        }
+
+        // Compute avg distance of good matches and insert it into the array
+        for (int j = 0; j < good_matches.size(); j++) {
+            avg_desc_dist = good_matches[i].distance;
+        }
+
+        avg_desc_dist = avg_desc_dist / good_matches.size();
+        printf("SIFT descriptors distance from image %3d: %f\n", i+1, avg_desc_dist);
+
+        desc_dist_array[i] = avg_desc_dist;
+    }
+
+    return 0;
+}
 
 /** @function retrieveDescriptors */
-int retrieveDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
+int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
     Mat database_img;                       // Store the database image
     Mat query_desc, db_img_desc;            // Store descriptors
     vector<KeyPoint> query_kp, db_img_kp;   // Store keypoint
     vector<DMatch> matches;                 // Store the matches between descriptors
     vector<DMatch>::iterator m_it;          // Iterator for a vector of DMatch
     double avg_desc_dist = 0;
+    int number_keypoints = 0;
+
+    // Convert query to grayscale
+    cvtColor(query, query, COLOR_BGR2GRAY);
 
     // Create detector for ORB descriptors
     Ptr<ORB> orb = ORB::create();
@@ -80,13 +152,16 @@ int retrieveDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
             return -1;
         }
 
+        // Convert database image to grayscale
+        cvtColor(database_img, database_img, COLOR_BGR2GRAY);
+
         // Detect and compute keypoints and descriptors of the database image
         orb->detectAndCompute(database_img, noArray(), db_img_kp, db_img_desc);
 
         // Match descriptors
         bf->match(query_desc, db_img_desc, matches);
 
-        // Sort descriptors in order of their distances
+        // Sort descriptors in ascending order of their distances
         sort(matches.begin(), matches.end(), compare_response);
 
         // Compute average distance of the firs 10 descriptors
@@ -94,7 +169,7 @@ int retrieveDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
             avg_desc_dist += (*m_it).distance;
         }
 
-        avg_desc_dist = avg_desc_dist / 10;
+        avg_desc_dist = avg_desc_dist / matches.size();
         printf("Descriptors distance from image %3d: %f\n", i+1, avg_desc_dist);
 
         // Insert the computet average dist in the array
@@ -202,7 +277,7 @@ int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
 		printf("Color distance from %3d: %f\n", i+1, dist);
 
 		// insert found distance in distance_array
-		color_dist_array[i] = dist/10000000;
+		color_dist_array[i] = dist;
 	}
 
     return 0;

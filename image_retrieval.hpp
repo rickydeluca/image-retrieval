@@ -11,6 +11,7 @@
 #include <opencv2/core/utility.hpp>
 #include <opencv2/core/types.hpp>
 #include <opencv2/features2d.hpp>
+#include <opencv2/xfeatures2d.hpp>
 
 #define DATABASE_SIZE   62
 #define N_SIM_IMGS      3
@@ -21,4 +22,6 @@ int retrieveShapes(cv::Mat query, double (&shape_dist_array)[DATABASE_SIZE]);
 
 int retrieveColors(cv::Mat query, double (&color_dist_array)[DATABASE_SIZE]);
 
-int retrieveDescriptors(cv::Mat query, double (&desc_dist_array)[DATABASE_SIZE]);
+int retrieveOrbDescriptors(cv::Mat query, double (&desc_dist_array)[DATABASE_SIZE]);
+
+int retrieveSiftDescriptors(cv::Mat query, double (&desc_dist_array)[DATABASE_SIZE]);

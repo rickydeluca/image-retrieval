@@ -72,7 +72,7 @@ int main (int argc, char** argv) {
 
     // Compute descriptor distance
     else {
-        ret = retrieveDescriptors(query, dist_array);
+        ret = retrieveOrbDescriptors(query, dist_array);
         if (ret < 0) {
             printf("ERROR: Cannot retrieve descriptors.\n");
             return -1;
