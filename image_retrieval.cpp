@@ -41,6 +41,7 @@ void showSimShapes(int (&idx_array)[N_SIM_IMGS]) {
     }
 }
 
+/** @function compare_response */
 bool compare_response(DMatch first, DMatch second) {
     if (first.distance < second.distance)
         return true;
