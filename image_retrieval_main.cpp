@@ -18,13 +18,14 @@ int main (int argc, char** argv) {
 
     // Select retrieval method
     printf("Select the retrieval method\n"
-            "\t1 - color histogram\n"
-            "\t2 - shapes distance\n"
-            "\t3 - ORB descriptors\n\n");
+            "\t1 - Color histogram\n"
+            "\t2 - Shapes distance\n"
+            "\t3 - ORB descriptors\n"
+            "\t4 - SIFT descriptors\n\n");
     
     scanf("%d", &retrieval_method);
 
-    if (retrieval_method < 1 || retrieval_method > 3 ) {
+    if (retrieval_method < 1 || retrieval_method > 4 ) {
         cout << "Plese insert a number between 1 and 3";
         return 0;
     }
@@ -70,9 +71,20 @@ int main (int argc, char** argv) {
         printf("\n");
     }
 
-    // Compute descriptor distance
-    else {
+    // Compute ORB descriptor distance
+    else if (retrieval_method == 3) {
         ret = retrieveOrbDescriptors(query, dist_array);
+        if (ret < 0) {
+            printf("ERROR: Cannot retrieve descriptors.\n");
+            return -1;
+        }
+
+        printf("\n");
+    }
+
+    // Compute SIFT descriptor distance
+    else {
+        ret = retrieveSiftDescriptors(query, dist_array);
         if (ret < 0) {
             printf("ERROR: Cannot retrieve descriptors.\n");
             return -1;

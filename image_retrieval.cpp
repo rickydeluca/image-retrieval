@@ -54,16 +54,18 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
     Mat query_desc, db_img_desc;            // Store descriptors
     vector<KeyPoint> query_kp, db_img_kp;   // Store keypoint
     vector<vector<DMatch>> matches;         // Store the matches between descriptors
-    vector<DMatch>::iterator m_it;          // Iterator for a vector of DMatch
     vector<DMatch> good_matches;            // Matches that pass the ratio test
     
-    double avg_desc_dist = 0;           
-    int number_keypoints = 0;
-    const float ratio = 0.6;                // Value for the ratio test
+    double avg_desc_dist    = 0;   
+    int number_keypoints    = 0;        
+    int number_good_matches = 0;
+    const float ratio       = 0.75;         // Value for the ratio test
 
-    // Convert query to grayscale
+    // Resize query and convert it to grayscale
+    Size size(800,600);
+    resize(query, query, size);
     cvtColor(query, query, COLOR_BGR2GRAY);
-
+    
     // Init SIFT detector
     Ptr<xfeatures2d::SIFT> sift = xfeatures2d::SIFT::create();
 
@@ -85,34 +87,37 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
             return -1;
         }
 
-        // Convert database image to grayscale
+        // Resize database image and convert it to grayscale
+        resize(database_img, database_img, size);
         cvtColor(database_img, database_img, COLOR_BGR2GRAY);
         
         // Detect and compute keypoints and descriptors of the database image
-        printf("Before detectAndCompute\n");
         sift->detectAndCompute(database_img, noArray(), db_img_kp, db_img_desc);
 
         // Match descriptors
-        printf("Before knnMatch\n");
         bf->knnMatch(query_desc, db_img_desc, matches, 2);
-        printf("After knnMatch\n");
 
         // Apply ratio test
         for (int j = 0; j < matches.size(); j++) {
-            if (matches[i][0].distance < ratio * matches[i][1].distance) {
-                good_matches.push_back(matches[i][0]);
+            if (matches[j][0].distance < ratio * matches[j][1].distance) {
+                good_matches.push_back(matches[j][0]);
             }
         }
-
-        // Compute avg distance of good matches and insert it into the array
-        for (int j = 0; j < good_matches.size(); j++) {
-            avg_desc_dist = good_matches[i].distance;
+        
+        number_good_matches = (int) good_matches.size();
+        
+        if (query_kp.size() < db_img_kp.size()) {
+            number_keypoints = query_kp.size();
+        } else {
+            number_keypoints = db_img_kp.size();
         }
 
-        avg_desc_dist = avg_desc_dist / good_matches.size();
-        printf("SIFT descriptors distance from image %3d: %f\n", i+1, avg_desc_dist);
+        // Insert num of good matches in the array
+        desc_dist_array[i] = number_good_matches / number_keypoints * -100;
 
-        desc_dist_array[i] = avg_desc_dist;
+        // Clear the good matches vector
+        number_good_matches = 0;
+        good_matches.clear();
     }
 
     return 0;
@@ -167,6 +172,7 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
         // Compute average distance of the firs 10 descriptors
         for (m_it = matches.begin(); m_it < matches.begin()+10; m_it++) {
             avg_desc_dist += (*m_it).distance;
+            // printf("Distance: %f\n", (*m_it).distance);
         }
 
         avg_desc_dist = avg_desc_dist / matches.size();
