@@ -56,11 +56,10 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
     vector<vector<DMatch>> matches;         // Store the matches between descriptors
     vector<DMatch> good_matches;            // Matches that pass the ratio test
     
-    double desc_dist        = 0;
-    double max_dist         = 100;
-    int num_good_matches    = 0;
-    
-    const float ratio       = 0.8;          // Value for the ratio test
+    const float ratio       = 0.6;          // Value for the ratio test
+    double desc_dist        = 0;  
+    double similarity_score = 0;
+    int num_keypoints       = 0;
 
     // Resize query and convert it to grayscale
     Size size(800,600);
@@ -109,21 +108,40 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
         }
 
         // Compute euclidean distance of the good matches
-        num_good_matches = 0;
+        desc_dist = 0;
         for (int j = 0; j < good_matches.size(); j++) {
-            desc_dist = good_matches[j].distance;
-            // printf("desc dist: %f\n", desc_dist);
-            if (desc_dist < max_dist)
-                num_good_matches++;
-            
-            desc_dist += desc_dist * desc_dist;
+            desc_dist += good_matches[j].distance * good_matches[j].distance;;
         }
 
-        desc_dist = sqrt(desc_dist) / num_good_matches;
-      
+        if (good_matches.size() == 0) {
+            desc_dist = numeric_limits<double>::infinity();
+        } else {
+            desc_dist = sqrt(desc_dist) / good_matches.size();
+        }
+
         // Insert num of good matches in the array
         printf("Descriptors distance from image %3d: %f\n", i+1, desc_dist);
         desc_dist_array[i] = desc_dist;
+        
+
+        /* Compute the similarity score
+        num_keypoints = 0;
+        if (query_kp.size() < db_img_kp.size()) {
+            num_keypoints = query_kp.size();
+        } else {
+            num_keypoints = db_img_kp.size();
+        }
+
+        printf("Number keypoints: %d\n", num_keypoints);
+        printf("Number good matches: %lu\n", good_matches.size());
+        printf( "good matches / num keypoints = %f\n", ((double)good_matches.size()) / ((double)num_keypoints) );
+        similarity_score = ((double)good_matches.size()) / ((double)num_keypoints) * 100;
+        
+        printf("Similarity score with image %3d: %f\n", i, similarity_score);
+
+        desc_dist_array[i] = -similarity_score;
+        */
+
     }
 
     return 0;
@@ -133,12 +151,12 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
 int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
     Mat database_img;                       // Store the database image
     Mat query_desc, db_img_desc;            // Store descriptors
+    
     vector<KeyPoint> query_kp, db_img_kp;   // Store keypoint
     vector<DMatch> matches;                 // Store the matches between descriptors
     vector<DMatch>::iterator m_it;          // Iterator for a vector of DMatch
+    
     double desc_dist        = 0;
-    double max_dist         = 25;
-    int num_good_matches    = 0;
 
     // Convert query to grayscale
     cvtColor(query, query, COLOR_BGR2GRAY);
@@ -179,19 +197,14 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
         // Sort descriptors in ascending order of their distances
         sort(matches.begin(), matches.end(), compare_response);
 
-        // Compute euclidean distance of the first 10 descriptors
-        desc_dist           = 0;
-        num_good_matches    = 0;
-        for (m_it = matches.begin(); m_it < matches.end(); m_it++) {
-            desc_dist = (*m_it).distance;
-            
-            if (desc_dist < max_dist)
-                num_good_matches++;
-            
-            desc_dist += desc_dist * desc_dist;
-            
+        // Compute euclidian distance of the firs 10 descriptors
+        desc_dist = 0;
+
+        for (m_it = matches.begin(); m_it < matches.begin()+10; m_it++) {
+            desc_dist += (*m_it).distance * (*m_it).distance; 
         }
-        desc_dist = sqrt(desc_dist) / num_good_matches;
+
+        desc_dist = sqrt(desc_dist) / matches.size();
 
         // Insert the computet average dist in the array
         printf("Descriptors distance from image %3d: %f\n", i+1, desc_dist);
