@@ -64,7 +64,7 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
     // Resize query and convert it to grayscale
     Size size(800,600);
     resize(query, query, size);
-    // cvtColor(query, query, COLOR_BGR2GRAY);
+    cvtColor(query, query, COLOR_BGR2GRAY);
     
     // Init SIFT detector
     Ptr<xfeatures2d::SIFT> sift = xfeatures2d::SIFT::create();
@@ -90,6 +90,7 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
 
         // Resize database image and convert it to grayscale
         resize(database_img, database_img, size);
+        cvtColor(database_img, database_img, COLOR_BGR2GRAY);
         
         // Detect and compute keypoints and descriptors of the database image
         db_img_kp.clear();
@@ -120,28 +121,8 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
         }
 
         // Insert num of good matches in the array
-        printf("Descriptors distance from image %3d: %f\n", i+1, desc_dist);
+        printf("SIFT descriptors distance from image %3d: %f\n", i+1, desc_dist);
         desc_dist_array[i] = desc_dist;
-        
-
-        /* Compute the similarity score
-        num_keypoints = 0;
-        if (query_kp.size() < db_img_kp.size()) {
-            num_keypoints = query_kp.size();
-        } else {
-            num_keypoints = db_img_kp.size();
-        }
-
-        printf("Number keypoints: %d\n", num_keypoints);
-        printf("Number good matches: %lu\n", good_matches.size());
-        printf( "good matches / num keypoints = %f\n", ((double)good_matches.size()) / ((double)num_keypoints) );
-        similarity_score = ((double)good_matches.size()) / ((double)num_keypoints) * 100;
-        
-        printf("Similarity score with image %3d: %f\n", i, similarity_score);
-
-        desc_dist_array[i] = -similarity_score;
-        */
-
     }
 
     return 0;
@@ -158,7 +139,9 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
     
     double desc_dist        = 0;
 
-    // Convert query to grayscale
+    // Resize the query and convert it to grayscale
+    Size size(800,600);
+    resize(query, query, size);
     cvtColor(query, query, COLOR_BGR2GRAY);
 
     // Create detector for ORB descriptors
@@ -183,7 +166,8 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
             return -1;
         }
 
-        // Convert database image to grayscale
+        // Resize database image and convert it to grayscale
+        resize(database_img, database_img, size);
         cvtColor(database_img, database_img, COLOR_BGR2GRAY);
 
         // Detect and compute keypoints and descriptors of the database image
@@ -207,7 +191,7 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
         desc_dist = sqrt(desc_dist) / matches.size();
 
         // Insert the computet average dist in the array
-        printf("Descriptors distance from image %3d: %f\n", i+1, desc_dist);
+        printf("ORB descriptors distance from image %3d: %f\n", i+1, desc_dist);
         desc_dist_array[i] = desc_dist;
     }
 
