@@ -49,6 +49,7 @@ bool compare_response(DMatch first, DMatch second) {
     else 
         return false;
 }
+
 int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
     Mat database_img;                       // Store the database image
     Mat query_desc, db_img_desc;            // Store descriptors
@@ -56,7 +57,7 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
     vector<vector<DMatch>> matches;         // Store the matches between descriptors
     vector<DMatch> good_matches;            // Matches that pass the ratio test
     
-    const float ratio       = 0.6;          // Value for the ratio test
+    const float ratio       = 0.75;         // Value for the ratio test
     double desc_dist        = 0;  
     double similarity_score = 0;
     int num_keypoints       = 0;
@@ -107,22 +108,9 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
                 good_matches.push_back(matches[j][0]);
             }
         }
-
-        // Compute euclidean distance of the good matches
-        desc_dist = 0;
-        for (int j = 0; j < good_matches.size(); j++) {
-            desc_dist += good_matches[j].distance * good_matches[j].distance;;
-        }
-
-        if (good_matches.size() == 0) {
-            desc_dist = numeric_limits<double>::infinity();
-        } else {
-            desc_dist = sqrt(desc_dist) / good_matches.size();
-        }
-
-        // Insert num of good matches in the array
-        printf("SIFT descriptors distance from image %3d: %f\n", i+1, desc_dist);
-        desc_dist_array[i] = desc_dist;
+        
+        printf("Num of SIFT matches with image %3d: %lu\n", i+1, good_matches.size());
+        desc_dist_array[i] = 1 / ((float) good_matches.size());
     }
 
     return 0;
@@ -137,7 +125,7 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
     vector<DMatch> matches;                 // Store the matches between descriptors
     vector<DMatch>::iterator m_it;          // Iterator for a vector of DMatch
     
-    double desc_dist        = 0;
+    double desc_dist = 0;
 
     // Resize the query and convert it to grayscale
     Size size(800,600);
@@ -173,7 +161,7 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
         // Detect and compute keypoints and descriptors of the database image
         db_img_kp.clear();
         orb->detectAndCompute(database_img, noArray(), db_img_kp, db_img_desc);
-
+        
         // Match descriptors
         matches.clear();
         bf->match(query_desc, db_img_desc, matches);
@@ -193,6 +181,9 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
         // Insert the computet average dist in the array
         printf("ORB descriptors distance from image %3d: %f\n", i+1, desc_dist);
         desc_dist_array[i] = desc_dist;
+
+        // printf("Num of ORB matches with image %3d: %lu\n", i+1, matches.size());
+        // desc_dist_array[i] = ((float) matches.size());
     }
 
     return 0;

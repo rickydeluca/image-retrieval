@@ -117,16 +117,16 @@ int main (int argc, char** argv) {
 
         // Compute euclidian distance between arrays
         for (int j = 0; j < DATABASE_SIZE; j++) {
-            dist_array[j] = (orb_dist_array[j] - sift_dist_array[j]);
-            dist_array[j] =  sqrt(dist_array[j] * dist_array[j]);
+            dist_array[j] =  orb_dist_array[j] * sift_dist_array[j];
         }
+
     }
 
     // Sort the avg distance array
     memcpy(sorted_array, dist_array, sizeof(double)*DATABASE_SIZE);
 
     int n = sizeof(sorted_array) / sizeof(sorted_array[0]);
-	sort(sorted_array, sorted_array + n);
+    sort(sorted_array, sorted_array + n);
 
     // Find indexes of the most similars images to the query
     int j;
