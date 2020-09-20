@@ -18,7 +18,7 @@
 #define DATABASE_SIZE   56
 #define N_SIM_IMGS      3
 
-void showSimShapes(int (&idx_array)[N_SIM_IMGS]);
+void showSimImages(std::vector<int>& sim_images_idx, const int num_sim_images);
 
 int retrieveShapes(cv::Mat query, double (&shape_dist_array)[DATABASE_SIZE]);
 

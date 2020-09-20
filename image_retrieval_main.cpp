@@ -4,16 +4,13 @@ using namespace cv;
 using namespace std;
 
 // Global variables
-// double shape_dist_array[DATABASE_SIZE]  = {0};
-// double color_dist_array[DATABASE_SIZE]  = {0};
-// double desc_dist_array[DATABASE_SIZE]   = {0};
-double dist_array[DATABASE_SIZE]        = {0};
-double sorted_array[DATABASE_SIZE]      = {0};
-int idx_array[N_SIM_IMGS]               = {0};
+double dist_array[DATABASE_SIZE]        = {0};      // Store the computed distance between images
+double sorted_array[DATABASE_SIZE]      = {0};      // The dist_array sorted
+int desc_idx_array[DATABASE_SIZE]       = {0};      // Image indexes of the most similar descriptors
+int color_shape_idx_array[N_SIM_IMGS]   = {0};      // Image indexes of the most similar colors histograms or shapes
 
 int main (int argc, char** argv) {
     int ret = 0;    // Function retvalue
-    int i = 0;      // Iter
     int retrieval_method = 0;
 
     // Select retrieval method
@@ -21,13 +18,12 @@ int main (int argc, char** argv) {
             "\t1 - Color histogram\n"
             "\t2 - Shapes distance\n"
             "\t3 - ORB descriptors\n"
-            "\t4 - SIFT descriptors\n"
-            "\t5 - SIFT + ORB descriptors\n\n");
+            "\t4 - SIFT descriptors\n\n");
     
     scanf("%d", &retrieval_method);
 
-    if (retrieval_method < 1 || retrieval_method > 5 ) {
-        cout << "Plese insert a number between 1 and 5";
+    if (retrieval_method < 1 || retrieval_method > 4 ) {
+        cout << "Plese insert a number between 1 and 4";
         return 0;
     }
 
@@ -84,7 +80,7 @@ int main (int argc, char** argv) {
     }
 
     // Compute SIFT descriptor distance
-    else if (retrieval_method == 4){
+    else {
         ret = retrieveSiftDescriptors(query, dist_array);
         if (ret < 0) {
             printf("ERROR: Cannot retrieve descriptors.\n");
@@ -94,52 +90,47 @@ int main (int argc, char** argv) {
         printf("\n");
     }
 
-    else {
-        // Declare two different distance array for ORB and SIFT descriptors
-        double orb_dist_array[DATABASE_SIZE]    = {0};
-        double sift_dist_array[DATABASE_SIZE]   = {0};
-
-        ret = retrieveOrbDescriptors(query, orb_dist_array);
-        if (ret < 0) {
-            printf("ERROR: Cannot retrieve ORB descriptors.\n");
-            return -1;
-        }
-
-        printf("\n");
-
-        ret = retrieveSiftDescriptors(query, sift_dist_array);
-        if (ret < 0) {
-            printf("ERROR: Cannot retrieve SIFT descriptors.\n");
-            return -1;
-        }
-
-        printf("\n");
-
-        // Compute euclidian distance between arrays
-        for (int j = 0; j < DATABASE_SIZE; j++) {
-            dist_array[j] =  orb_dist_array[j] * sift_dist_array[j];
-        }
-
-    }
-
-    // Sort the avg distance array
+    
+    // Sort the distance array
     memcpy(sorted_array, dist_array, sizeof(double)*DATABASE_SIZE);
 
     int n = sizeof(sorted_array) / sizeof(sorted_array[0]);
     sort(sorted_array, sorted_array + n);
+        
+    // Find most similiar image indexes
+    vector<int> sim_images_idx;
 
-    // Find indexes of the most similars images to the query
-    int j;
-	for (i = 0; i < N_SIM_IMGS; i++) {
-		for (j = 0; j < DATABASE_SIZE; j++) {
-			if (sorted_array[i] == dist_array[j])
-				idx_array[i] = j+1;
-		}
-	}
+    for (int i = 0; i < N_SIM_IMGS; i++) {
+        for (int j = 0; j < DATABASE_SIZE; j++) {
+            if (sorted_array[i] == dist_array[j])
+                sim_images_idx.push_back(j+1);
+        }
+    }
+    
+    // Show them
+    showSimImages(sim_images_idx, N_SIM_IMGS);
 
-    // Show most similar shapes
-    showSimShapes(idx_array);
 
+    /*
+    // Show best good matches
+    else {
+        vector<int> sim_images_idx;
+
+        for (int j = 0; j < DATABASE_SIZE; j++) {
+            if (dist_array[j] < 0.04) {
+                sim_images_idx.push_back(j+1);
+            }
+        }
+
+        const int num_sim_images = sim_images_idx.size();
+
+        showSimImages(sim_images_idx, num_sim_images);
+
+        sim_images_idx.clear();
+    }
+    */
+
+    sim_images_idx.clear();
     k = waitKey(0);
     destroyAllWindows();
 

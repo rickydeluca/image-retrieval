@@ -3,41 +3,41 @@
 using namespace std;
 using namespace cv;
 
-/** @funtion showSimShapes */
-void showSimShapes(int (&idx_array)[N_SIM_IMGS]) {
-    printf("\nShow top %d most similar images\n\n", N_SIM_IMGS);
+/** @function showSimImages */
+void showSimImages(vector<int>& sim_images_idx, const int num_sim_images) {
+    printf("Show the most similars images\n\n");
 
-	int i, k;
-	int img_idx;
-	String similar_img_path = "";
-    Size size(800,600);
+    int img_idx;
+    String sim_image_path;
+    Size size(800, 600);
 
-	for (i = 0; i < N_SIM_IMGS; i++) {
-		img_idx = idx_array[i];
-		similar_img_path = "";
-		if (img_idx <= 9) { 
-			printf("img_00%d.JPG\n", img_idx);
+    for (int i = 0; i < num_sim_images; i++) {
+        img_idx = sim_images_idx[i];
+        sim_image_path = "";
 
-			similar_img_path = "./image_database/img_00" + to_string(img_idx) + ".JPG";
-			Mat similar_img = imread(similar_img_path, IMREAD_COLOR);
-			resize(similar_img, similar_img, size);
+        if (img_idx < 10) {
+            printf("img_00%d.JPG\n", img_idx);
+
+            sim_image_path = "./image_database/img_00" + to_string(img_idx) + ".JPG";
+            Mat sim_image = imread(sim_image_path, IMREAD_COLOR);
+            resize(sim_image, sim_image, size);
+
+            namedWindow("Display Image", WINDOW_AUTOSIZE);
+    		imshow("Display Image", sim_image);
+			waitKey(0);
+        }
+
+        else {
+            printf("img_0%d.JPG\n", img_idx);
+
+			sim_image_path = "./image_database/img_0" + to_string(img_idx) + ".JPG";
+			Mat sim_image = imread(sim_image_path, IMREAD_COLOR);
+			resize(sim_image, sim_image, size);
 
 			namedWindow("Display Image", WINDOW_AUTOSIZE);
-    		imshow("Display Image", similar_img);
-			k = waitKey(0);
-		}
-
-		else {
-			printf("img_0%d.JPG\n", img_idx);
-
-			similar_img_path = "./image_database/img_0" + to_string(img_idx) + ".JPG";
-			Mat similar_img = imread(similar_img_path, IMREAD_COLOR);
-			resize(similar_img, similar_img, size);
-
-			namedWindow("Display Image", WINDOW_AUTOSIZE);
-    		imshow("Display Image", similar_img);
-			k = waitKey(0);
-		}
+    		imshow("Display Image", sim_image);
+			waitKey(0);
+        }
     }
 }
 
