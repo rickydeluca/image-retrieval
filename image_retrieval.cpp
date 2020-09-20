@@ -41,6 +41,45 @@ void showSimShapes(int (&idx_array)[N_SIM_IMGS]) {
     }
 }
 
+double ransacClean(vector<cv::DMatch>& matches, vector<cv::KeyPoint>& query_kp, vector<cv::KeyPoint>& db_img_kp) {
+     vector<cv::DMatch> out_matches;
+    
+    // Convert keypoints into Point2f	
+    std::vector<cv::Point2f> points1, points2;	
+    for (std::vector<cv::DMatch>::const_iterator it= matches.begin();
+            it!= matches.end(); ++it) {
+
+            // Get the position of left keypoints
+            float x= query_kp[it->queryIdx].pt.x;
+            float y= query_kp[it->queryIdx].pt.y;
+            points1.push_back(cv::Point2f(x,y));
+            
+            // Get the position of right keypoints
+            x= db_img_kp[it->trainIdx].pt.x;
+            y= db_img_kp[it->trainIdx].pt.y;
+            points2.push_back(cv::Point2f(x,y));
+    }
+
+    // Compute F matrix using RANSAC
+    std::vector<uchar> inliers(points1.size(),0);
+    cv::Mat fundemental= cv::findFundamentalMat(cv::Mat(points1),cv::Mat(points2), inliers);
+
+    // extract the surviving (inliers) matches
+    std::vector<uchar>::const_iterator itIn= inliers.begin();
+    std::vector<cv::DMatch>::const_iterator itM= matches.begin();
+
+    // for all matches
+    for ( ; itIn!= inliers.end(); ++itIn, ++itM) {
+
+        if (*itIn) { // it is a valid match
+
+            out_matches.push_back(*itM);
+        }
+    }
+
+    return (double) out_matches.size();
+}
+
 /** @function compare_response */
 bool compare_response(DMatch first, DMatch second) {
     if (first.distance < second.distance)
@@ -109,8 +148,11 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
             }
         }
         
-        printf("Num of SIFT matches with image %3d: %lu\n", i+1, good_matches.size());
-        desc_dist_array[i] = 1 / ((float) good_matches.size());
+        // Refine using RANSAC
+        double num_good_matches_refined = ransacClean(good_matches, query_kp, db_img_kp);
+
+        printf("Num of SIFT matches with image %3d: %f\n", i+1, num_good_matches_refined);
+        desc_dist_array[i] = 1 / num_good_matches_refined;
     }
 
     return 0;
@@ -120,12 +162,17 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
 int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
     Mat database_img;                       // Store the database image
     Mat query_desc, db_img_desc;            // Store descriptors
+    Mat homography;                         // Store homography
     
     vector<KeyPoint> query_kp, db_img_kp;   // Store keypoint
     vector<DMatch> matches;                 // Store the matches between descriptors
+    vector<DMatch> good_matches;
     vector<DMatch>::iterator m_it;          // Iterator for a vector of DMatch
-    
-    double desc_dist = 0;
+
+    const int MAX_FEATURES          = 500;
+    const float GOOD_MATCH_PERCENT  = 0.75f;
+
+    double desc_dist                = 0;
 
     // Resize the query and convert it to grayscale
     Size size(800,600);
@@ -133,14 +180,15 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
     cvtColor(query, query, COLOR_BGR2GRAY);
 
     // Create detector for ORB descriptors
-    Ptr<ORB> orb = ORB::create();
+    Ptr<ORB> orb = ORB::create(MAX_FEATURES);
 
     // Detect and compute keypoints and descriptors of the query
     query_kp.clear();
-    orb->detectAndCompute(query, noArray(), query_kp, query_desc);
+    orb->detectAndCompute(query, Mat(), query_kp, query_desc);
 
     // Create BFMatcher object
     Ptr<BFMatcher> bf = BFMatcher::create(NORM_HAMMING, true);
+    // Ptr<DescriptorMatcher> bf = DescriptorMatcher::create("BruteForce-Hamming");
 
     // Scan the database
     VideoCapture cap("./image_database/img_%3d.JPG"); // %3d means 00x.JPG notation
@@ -160,30 +208,24 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
 
         // Detect and compute keypoints and descriptors of the database image
         db_img_kp.clear();
-        orb->detectAndCompute(database_img, noArray(), db_img_kp, db_img_desc);
+        orb->detectAndCompute(database_img, Mat(), db_img_kp, db_img_desc);
         
-        // Match descriptors
+        // Match features
         matches.clear();
-        bf->match(query_desc, db_img_desc, matches);
+        bf->match(query_desc, db_img_desc, matches, Mat());
 
-        // Sort descriptors in ascending order of their distances
-        sort(matches.begin(), matches.end(), compare_response);
+        // Sort matches by score
+        std::sort(matches.begin(), matches.end());
 
-        // Compute euclidian distance of the firs 10 descriptors
-        desc_dist = 0;
+        // Remove not so good matches
+        const int num_good_matches = matches.size() * GOOD_MATCH_PERCENT;
+        matches.erase(matches.begin() + num_good_matches, matches.end());
 
-        for (m_it = matches.begin(); m_it < matches.begin()+10; m_it++) {
-            desc_dist += (*m_it).distance * (*m_it).distance; 
-        }
+        // Refine using RANSAC
+        double num_good_matches_refined = ransacClean(matches, query_kp, db_img_kp);
 
-        desc_dist = sqrt(desc_dist) / matches.size();
-
-        // Insert the computet average dist in the array
-        printf("ORB descriptors distance from image %3d: %f\n", i+1, desc_dist);
-        desc_dist_array[i] = desc_dist;
-
-        // printf("Num of ORB matches with image %3d: %lu\n", i+1, matches.size());
-        // desc_dist_array[i] = ((float) matches.size());
+        printf("Num of ORB good matches with image %3d: %f\n", i+1, num_good_matches_refined);
+        desc_dist_array[i] = 1 / (double) num_good_matches_refined;
     }
 
     return 0;
