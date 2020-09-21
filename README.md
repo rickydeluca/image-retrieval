@@ -25,8 +25,8 @@ Results with image 01:
 2) Shapes
 
 3) ORB descriptors
-![image](./screenshots/01_orb.png)
-![image](./screenshots/01_orb_tot.png)
+![orb](./screenshots/01_orb.png)
+![orb results](./screenshots/01_orb_tot.png)
 
 4) SIFT descriptors
 
