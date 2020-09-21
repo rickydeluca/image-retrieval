@@ -20,18 +20,16 @@ Then:\
 Results with image 01:
 ![query](./image_database/img_001.JPG)
 
-1) Color histogram
+1) Color histogram\
 
-2) Shapes
+2) Shapes\
 ![shape](./screenshots/01_shape.png)
 ![shape results](./screenshots/01_shape_tot.png)
 
-3) ORB descriptors
+3) ORB descriptors\
 ![orb](./screenshots/01_orb.png)
 ![orb results](./screenshots/01_orb_tot.png)
 
-4) SIFT descriptors
+4) SIFT descriptors\
 ![sift](./screenshots/01_sift.png)
 ![sift results](./screenshots/01_sift_tot.png)
-
-5) ORB + SIFT descriptors
