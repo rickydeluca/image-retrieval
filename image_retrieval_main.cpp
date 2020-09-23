@@ -6,6 +6,7 @@ using namespace std;
 // Global variables
 double dist_array[DATABASE_SIZE]        = {0};      // Store the computed distance between images
 double sorted_array[DATABASE_SIZE]      = {0};      // The dist_array sorted
+double normalized_array[DATABASE_SIZE]  = {0};      // The dist_array normalized
 int desc_idx_array[DATABASE_SIZE]       = {0};      // Image indexes of the most similar descriptors
 int color_shape_idx_array[N_SIM_IMGS]   = {0};      // Image indexes of the most similar colors histograms or shapes
 
@@ -103,34 +104,39 @@ int main (int argc, char** argv) {
     for (int i = 0; i < N_SIM_IMGS; i++) {
         for (int j = 0; j < DATABASE_SIZE; j++) {
             if (sorted_array[i] == dist_array[j])
-                sim_images_idx.push_back(j+1);
+                sim_images_idx.push_back(j);
         }
     }
     
     // Show them
-    showSimImages(sim_images_idx, N_SIM_IMGS);
-
-
-    /*
-    // Show best good matches
-    else {
-        vector<int> sim_images_idx;
-
-        for (int j = 0; j < DATABASE_SIZE; j++) {
-            if (dist_array[j] < 0.04) {
-                sim_images_idx.push_back(j+1);
-            }
-        }
-
-        const int num_sim_images = sim_images_idx.size();
-
-        showSimImages(sim_images_idx, num_sim_images);
-
-        sim_images_idx.clear();
-    }
-    */
-
+    showSimImages(sim_images_idx, dist_array, N_SIM_IMGS);
     sim_images_idx.clear();
+
+    // Normalize dist_array and print it on file
+    FILE *fp;
+
+    if ((fp = fopen("data.txt", "wt")) == NULL) {
+        printf("Errore nell'apertura del file\n\n");
+		exit(1);
+    }
+
+    for (int i = 0; i < DATABASE_SIZE; i++) {
+        dist_array[i] = 1 / dist_array[i];
+    }
+
+    double min_dist = *(min_element(dist_array, dist_array + DATABASE_SIZE));
+    double max_dist = *(max_element(dist_array, dist_array + DATABASE_SIZE));
+
+    for (int i = 0; i < DATABASE_SIZE - 1; i++) {
+        normalized_array[i] = ((dist_array[i] - min_dist) / (max_dist - min_dist)) * 100;   // Normalization formula
+        fprintf(fp, "%f, ", normalized_array[i]);
+    }
+
+    normalized_array[DATABASE_SIZE] = ((dist_array[DATABASE_SIZE] - min_dist) / (max_dist - min_dist)) * 100;
+    fprintf(fp, "%f", normalized_array[DATABASE_SIZE]);
+
+    fclose(fp);
+
     k = waitKey(0);
     destroyAllWindows();
 
