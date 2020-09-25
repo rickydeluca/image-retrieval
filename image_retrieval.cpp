@@ -4,7 +4,7 @@ using namespace std;
 using namespace cv;
 
 /** @function showSimImages */
-void showSimImages(vector<int>& sim_images_idx, const int num_sim_images) {
+void showSimImages(vector<int>& sim_images_idx, double (&dist_array)[DATABASE_SIZE], const int num_sim_images) {
     printf("Show the most similars images\n\n");
 
     int img_idx;
@@ -12,11 +12,11 @@ void showSimImages(vector<int>& sim_images_idx, const int num_sim_images) {
     Size size(800, 600);
 
     for (int i = 0; i < num_sim_images; i++) {
-        img_idx = sim_images_idx[i];
+        img_idx = sim_images_idx[i] + 1;
         sim_image_path = "";
 
         if (img_idx < 10) {
-            printf("img_00%d.JPG\n", img_idx);
+            printf("img_00%d.JPG --> Dist: %f\n", img_idx, dist_array[img_idx-1]);
 
             sim_image_path = "./image_database/img_00" + to_string(img_idx) + ".JPG";
             Mat sim_image = imread(sim_image_path, IMREAD_COLOR);
@@ -28,7 +28,7 @@ void showSimImages(vector<int>& sim_images_idx, const int num_sim_images) {
         }
 
         else {
-            printf("img_0%d.JPG\n", img_idx);
+            printf("img_0%d.JPG --> Dist: %f\n", img_idx, dist_array[img_idx-1]);
 
 			sim_image_path = "./image_database/img_0" + to_string(img_idx) + ".JPG";
 			Mat sim_image = imread(sim_image_path, IMREAD_COLOR);
@@ -39,6 +39,17 @@ void showSimImages(vector<int>& sim_images_idx, const int num_sim_images) {
 			waitKey(0);
         }
     }
+}
+
+/* @function findAvgDist */
+double findAvgDist(vector<cv::DMatch>& matches, int num_matches) {
+    double dist;
+
+    for (int i = 0; i < 10; i++) {
+        dist += matches[i].distance;
+    }
+
+    return dist / num_matches;
 }
 
 double ransacClean(vector<cv::DMatch>& matches, vector<cv::KeyPoint>& query_kp, vector<cv::KeyPoint>& db_img_kp) {
@@ -84,7 +95,6 @@ double ransacClean(vector<cv::DMatch>& matches, vector<cv::KeyPoint>& query_kp, 
 bool compare_response(DMatch first, DMatch second) {
     if (first.distance < second.distance)
         return true;
-    
     else 
         return false;
 }
@@ -96,10 +106,7 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
     vector<vector<DMatch>> matches;         // Store the matches between descriptors
     vector<DMatch> good_matches;            // Matches that pass the ratio test
     
-    const float ratio       = 0.75;         // Value for the ratio test
-    double desc_dist        = 0;  
-    double similarity_score = 0;
-    int num_keypoints       = 0;
+    const float ratio       = 0.8;         // Value for the ratio test
 
     // Resize query and convert it to grayscale
     Size size(800,600);
@@ -148,11 +155,17 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
             }
         }
         
-        // Refine using RANSAC
-        double num_good_matches_refined = ransacClean(good_matches, query_kp, db_img_kp);
+        // Sort good matches by distance
+        sort(good_matches.begin(), good_matches.end(), compare_response);
 
-        printf("Num of SIFT matches with image %3d: %f\n", i+1, num_good_matches_refined);
-        desc_dist_array[i] = 1 / num_good_matches_refined;
+        // Refine using RANSAC
+        double num_good_matches = ransacClean(good_matches, query_kp, db_img_kp);
+        
+        // double num_good_matches = good_matches.size();
+        // double dist = findAvgDist(good_matches, num_good_matches);
+
+        printf("Num of SIFT matches with image %3d: %f\n", i+1, num_good_matches);
+        desc_dist_array[i] = 1 / num_good_matches;
     }
 
     return 0;
@@ -167,12 +180,9 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
     vector<KeyPoint> query_kp, db_img_kp;   // Store keypoint
     vector<DMatch> matches;                 // Store the matches between descriptors
     vector<DMatch> good_matches;
-    vector<DMatch>::iterator m_it;          // Iterator for a vector of DMatch
-
+    
     const int MAX_FEATURES          = 500;
-    const float GOOD_MATCH_PERCENT  = 0.75f;
-
-    double desc_dist                = 0;
+    // const float GOOD_MATCH_PERCENT  = 0.8;
 
     // Resize the query and convert it to grayscale
     Size size(800,600);
@@ -188,7 +198,6 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
 
     // Create BFMatcher object
     Ptr<BFMatcher> bf = BFMatcher::create(NORM_HAMMING, true);
-    // Ptr<DescriptorMatcher> bf = DescriptorMatcher::create("BruteForce-Hamming");
 
     // Scan the database
     VideoCapture cap("./image_database/img_%3d.JPG"); // %3d means 00x.JPG notation
@@ -215,17 +224,18 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
         bf->match(query_desc, db_img_desc, matches, Mat());
 
         // Sort matches by score
-        std::sort(matches.begin(), matches.end());
+        std::sort(matches.begin(), matches.end(), compare_response);
 
         // Remove not so good matches
-        const int num_good_matches = matches.size() * GOOD_MATCH_PERCENT;
-        matches.erase(matches.begin() + num_good_matches, matches.end());
+        // int num_good_matches = matches.size() * GOOD_MATCH_PERCENT;
+        // matches.erase(matches.begin() + num_good_matches, matches.end());
 
         // Refine using RANSAC
         double num_good_matches_refined = ransacClean(matches, query_kp, db_img_kp);
-
+        
         printf("Num of ORB good matches with image %3d: %f\n", i+1, num_good_matches_refined);
-        desc_dist_array[i] = 1 / (double) num_good_matches_refined;
+        
+        desc_dist_array[i] = 1 / num_good_matches_refined;
     }
 
     return 0;
@@ -234,15 +244,26 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
 
 /** @function retrieveShapes */
 int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
-    int i = 0;          // Iter
-    double dist = 0.0;  // Store the distance between shapes
-    Mat database_img;   // Store the images read from the database
+    int i = 0;              // Iter
+    double dist = 0.0;      // Store the distance between shapes
+    Mat database_img;       // Store the images read from the database
+    Mat thresh_query, thresh_db_img;
 
     // Convert to grayscale
     cvtColor(query, query, COLOR_BGR2GRAY);
 
-    // Binarize the image using thresholding
-    threshold(query, query, 128, 255, THRESH_BINARY);
+    // Resize
+    Size size(800,600);
+    resize(query, query, size);
+
+    // Canny(query, query, 100, 200, 3);
+    // adaptiveThreshold(query, query, 255, ADAPTIVE_THRESH_MEAN_C, 
+    //                       THRESH_BINARY_INV, 11, 2);
+    threshold(query, query, 0, 255, THRESH_BINARY_INV + THRESH_OTSU);
+
+    namedWindow("Display Query", WINDOW_AUTOSIZE);
+    imshow("Display Query", query);
+    waitKey(0);
 
     // Read images from database
     VideoCapture cap("./image_database/img_%3d.JPG"); // %3d means 00x.JPG notation
@@ -257,16 +278,25 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
             return -1;
         }
         
-        // Convert to grayscale
+        // Convert to grayscale and resize
 		cvtColor(database_img, database_img, COLOR_BGR2GRAY);
+        resize(database_img, database_img, size);
 
-        // Binarize the image using thresholding
-        threshold(database_img, database_img, 128, 255, THRESH_BINARY);
+        // Binarize the image using thresholding        
+        // Canny(database_img, database_img, 100, 200, 3);
+        // adaptiveThreshold(database_img, database_img, 255, ADAPTIVE_THRESH_MEAN_C, 
+        //                  THRESH_BINARY_INV, 11, 2);
+        
+        threshold(database_img, database_img, 0, 255, THRESH_BINARY_INV + THRESH_OTSU);
 
-        // Comparing shapes
-        dist = matchShapes(query, database_img, CONTOURS_MATCH_I2, 0);
-        printf("Shape distance from image %3d: %f\n", i+1, dist);
+        namedWindow("Display DB Img", WINDOW_AUTOSIZE);
+        imshow("Display DB Img", database_img);
+        waitKey(2);
 
+        // Shape matching
+        dist = matchShapes(query, database_img, CONTOURS_MATCH_I2, 0.0);
+        printf("Shape distance from image %d: %f\n", i+1, dist);
+        
         // Insert distances in the array
         shape_dist_array[i] = dist;
     }
@@ -279,6 +309,10 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
 int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
     int i = 0;          // Iter
     Mat database_img;   // Store the images read from the database
+
+    // Resize the image
+    Size size(800,600);
+    resize(query, query, size);
 
     // Convert to HSV colorspace
     cvtColor(query, query, COLOR_BGR2HSV);
@@ -309,6 +343,8 @@ int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
         if (!database_img.data) {
             return -1;
         }
+        // Resize image
+        resize(database_img, database_img, size);
         
         // Convert to HSV color space
 		cvtColor(database_img, database_img, COLOR_BGR2HSV);
