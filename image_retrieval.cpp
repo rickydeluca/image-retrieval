@@ -52,43 +52,36 @@ double findAvgDist(vector<cv::DMatch>& matches, int num_matches) {
     return dist / num_matches;
 }
 
-double ransacClean(vector<cv::DMatch>& matches, vector<cv::KeyPoint>& query_kp, vector<cv::KeyPoint>& db_img_kp) {
-     vector<cv::DMatch> out_matches;
-    
-    // Convert keypoints into Point2f	
-    std::vector<cv::Point2f> points1, points2;	
-    for (std::vector<cv::DMatch>::const_iterator it= matches.begin();
-            it!= matches.end(); ++it) {
+/* @function findNumInliners */
+int findNumInliners(vector<cv::DMatch>& matches, vector<cv::KeyPoint>& query_kp, vector<cv::KeyPoint>& db_img_kp) {
+    // If there aren't matches at all, it's useless to search inliers
+    if (matches.size() == 0)
+        return 0.0;
 
-            // Get the position of left keypoints
-            float x= query_kp[it->queryIdx].pt.x;
-            float y= query_kp[it->queryIdx].pt.y;
-            points1.push_back(cv::Point2f(x,y));
-            
-            // Get the position of right keypoints
-            x= db_img_kp[it->trainIdx].pt.x;
-            y= db_img_kp[it->trainIdx].pt.y;
-            points2.push_back(cv::Point2f(x,y));
+    // Extract location of good matches
+    vector<Point2f> query_points, db_img_points;
+
+    for (size_t i = 0; i < matches.size(); i++) {
+        query_points.push_back(query_kp[matches[i].queryIdx].pt);
+        db_img_points.push_back(db_img_kp[matches[i].trainIdx].pt);
     }
 
-    // Compute F matrix using RANSAC
-    std::vector<uchar> inliers(points1.size(),0);
-    cv::Mat fundemental= cv::findFundamentalMat(cv::Mat(points1),cv::Mat(points2), inliers);
+    // Find homograpy and its mask 
+    vector<uchar> mask;   // mask is a Nx1 matrix of 1s and 0s
+    Mat h = findHomography(query_points, db_img_points, mask, RANSAC, 3.0);
 
-    // extract the surviving (inliers) matches
-    std::vector<uchar>::const_iterator itIn= inliers.begin();
-    std::vector<cv::DMatch>::const_iterator itM= matches.begin();
-
-    // for all matches
-    for ( ; itIn!= inliers.end(); ++itIn, ++itM) {
-
-        if (*itIn) { // it is a valid match
-
-            out_matches.push_back(*itM);
+    // Find which matches are inliers
+    int num_inliers  = 0;
+    int num_outliers = 0;
+    for (size_t i = 0; i < mask.size(); i++) {
+        if (mask[i]) {    // If "1" the good match is also an inliers
+            num_inliers++;
+        } else {
+            num_outliers++;
         }
     }
 
-    return (double) out_matches.size();
+    return num_inliers;
 }
 
 /** @function compare_response */
@@ -106,7 +99,7 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
     vector<vector<DMatch>> matches;         // Store the matches between descriptors
     vector<DMatch> good_matches;            // Matches that pass the ratio test
     
-    const float ratio       = 0.8;         // Value for the ratio test
+    const float ratio       = 0.7;          // Value for the ratio test
 
     // Resize query and convert it to grayscale
     Size size(800,600);
@@ -154,18 +147,15 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
                 good_matches.push_back(matches[j][0]);
             }
         }
-        
-        // Sort good matches by distance
-        sort(good_matches.begin(), good_matches.end(), compare_response);
 
         // Refine using RANSAC
-        double num_good_matches = ransacClean(good_matches, query_kp, db_img_kp);
-        
+        int num_good_matches = findNumInliners(good_matches, query_kp, db_img_kp);
+
         // double num_good_matches = good_matches.size();
         // double dist = findAvgDist(good_matches, num_good_matches);
 
-        printf("Num of SIFT matches with image %3d: %f\n", i+1, num_good_matches);
-        desc_dist_array[i] = 1 / num_good_matches;
+        printf("Num of SIFT matches with image %3d: %d\n", i+1, num_good_matches);
+        desc_dist_array[i] = 1 / (double) num_good_matches;
     }
 
     return 0;
@@ -181,8 +171,7 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
     vector<DMatch> matches;                 // Store the matches between descriptors
     vector<DMatch> good_matches;
     
-    const int MAX_FEATURES          = 500;
-    // const float GOOD_MATCH_PERCENT  = 0.8;
+    const float GOOD_MATCH_PERCENT  = 1;
 
     // Resize the query and convert it to grayscale
     Size size(800,600);
@@ -190,7 +179,7 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
     cvtColor(query, query, COLOR_BGR2GRAY);
 
     // Create detector for ORB descriptors
-    Ptr<ORB> orb = ORB::create(MAX_FEATURES);
+    Ptr<ORB> orb = ORB::create();
 
     // Detect and compute keypoints and descriptors of the query
     query_kp.clear();
@@ -227,15 +216,15 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
         std::sort(matches.begin(), matches.end(), compare_response);
 
         // Remove not so good matches
-        // int num_good_matches = matches.size() * GOOD_MATCH_PERCENT;
-        // matches.erase(matches.begin() + num_good_matches, matches.end());
+        int num_good_matches = matches.size() * GOOD_MATCH_PERCENT;
+        matches.erase(matches.begin() + num_good_matches, matches.end());
 
         // Refine using RANSAC
-        double num_good_matches_refined = ransacClean(matches, query_kp, db_img_kp);
+        int num_good_matches_refined = findNumInliners(matches, query_kp, db_img_kp);
         
-        printf("Num of ORB good matches with image %3d: %f\n", i+1, num_good_matches_refined);
+        printf("Num of ORB good matches with image %3d: %d\n", i+1, num_good_matches_refined);
         
-        desc_dist_array[i] = 1 / num_good_matches_refined;
+        desc_dist_array[i] = 1 / (double) num_good_matches_refined;
     }
 
     return 0;

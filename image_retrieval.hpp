@@ -18,7 +18,7 @@
 #define DATABASE_SIZE   56
 #define N_SIM_IMGS      3
 
-void showSimImages(std::vector<int>& sim_images_idx, const int num_sim_images);
+void showSimImages(std::vector<int>& sim_images_idx, double (&dist_array)[DATABASE_SIZE], const int num_sim_images);
 
 int retrieveShapes(cv::Mat query, double (&shape_dist_array)[DATABASE_SIZE]);
 
@@ -28,4 +28,4 @@ int retrieveOrbDescriptors(cv::Mat query, double (&desc_dist_array)[DATABASE_SIZ
 
 int retrieveSiftDescriptors(cv::Mat query, double (&desc_dist_array)[DATABASE_SIZE]);
 
-double ransacClean(std::vector<cv::DMatch>& matches, std::vector<cv::KeyPoint>& query_kp, std::vector<cv::KeyPoint>& db_img_kp);
+int findNumInliners(std::vector<cv::DMatch>& matches, std::vector<cv::KeyPoint>& query_kp, std::vector<cv::KeyPoint>& db_img_kp);
