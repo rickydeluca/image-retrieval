@@ -52,8 +52,8 @@ double findAvgDist(vector<cv::DMatch>& matches, int num_matches) {
     return dist / num_matches;
 }
 
-/* @function findNumInliners */
-int findNumInliners(vector<cv::DMatch>& matches, vector<cv::KeyPoint>& query_kp, vector<cv::KeyPoint>& db_img_kp) {
+/* @function findNumInliers */
+int findNumInliers(vector<cv::DMatch>& matches, vector<cv::KeyPoint>& query_kp, vector<cv::KeyPoint>& db_img_kp) {
     // If there aren't matches at all, it's useless to search inliers
     if (matches.size() == 0)
         return 0.0;
@@ -149,7 +149,7 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
         }
 
         // Refine using RANSAC
-        int num_good_matches = findNumInliners(good_matches, query_kp, db_img_kp);
+        int num_good_matches = findNumInliers(good_matches, query_kp, db_img_kp);
 
         // double num_good_matches = good_matches.size();
         // double dist = findAvgDist(good_matches, num_good_matches);
@@ -220,7 +220,7 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
         matches.erase(matches.begin() + num_good_matches, matches.end());
 
         // Refine using RANSAC
-        int num_good_matches_refined = findNumInliners(matches, query_kp, db_img_kp);
+        int num_good_matches_refined = findNumInliers(matches, query_kp, db_img_kp);
         
         printf("Num of ORB good matches with image %3d: %d\n", i+1, num_good_matches_refined);
         

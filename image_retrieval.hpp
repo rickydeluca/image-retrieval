@@ -28,4 +28,4 @@ int retrieveOrbDescriptors(cv::Mat query, double (&desc_dist_array)[DATABASE_SIZ
 
 int retrieveSiftDescriptors(cv::Mat query, double (&desc_dist_array)[DATABASE_SIZE]);
 
-int findNumInliners(std::vector<cv::DMatch>& matches, std::vector<cv::KeyPoint>& query_kp, std::vector<cv::KeyPoint>& db_img_kp);
+int findNumInliers(std::vector<cv::DMatch>& matches, std::vector<cv::KeyPoint>& query_kp, std::vector<cv::KeyPoint>& db_img_kp);
