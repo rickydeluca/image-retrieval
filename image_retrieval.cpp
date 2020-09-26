@@ -72,12 +72,9 @@ int findNumInliers(vector<cv::DMatch>& matches, vector<cv::KeyPoint>& query_kp, 
 
     // Find which matches are inliers
     int num_inliers  = 0;
-    int num_outliers = 0;
     for (size_t i = 0; i < mask.size(); i++) {
         if (mask[i]) {    // If "1" the good match is also an inliers
             num_inliers++;
-        } else {
-            num_outliers++;
         }
     }
 
@@ -92,6 +89,7 @@ bool compare_response(DMatch first, DMatch second) {
         return false;
 }
 
+/* @function retrieveSiftDescriptors */
 int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
     Mat database_img;                       // Store the database image
     Mat query_desc, db_img_desc;            // Store descriptors
@@ -161,7 +159,7 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
     return 0;
 }
 
-/** @function retrieveDescriptors */
+/** @function retrieveOrbDescriptors */
 int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) {
     Mat database_img;                       // Store the database image
     Mat query_desc, db_img_desc;            // Store descriptors
