@@ -169,7 +169,7 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
     vector<DMatch> matches;                 // Store the matches between descriptors
     vector<DMatch> good_matches;
     
-    const float GOOD_MATCH_PERCENT  = 1;
+    // const float GOOD_MATCH_PERCENT  = 1;
 
     // Resize the query and convert it to grayscale
     Size size(800,600);
@@ -213,9 +213,11 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
         // Sort matches by score
         std::sort(matches.begin(), matches.end(), compare_response);
 
+        /*
         // Remove not so good matches
         int num_good_matches = matches.size() * GOOD_MATCH_PERCENT;
         matches.erase(matches.begin() + num_good_matches, matches.end());
+        */
 
         // Refine using RANSAC
         int num_good_matches_refined = findNumInliers(matches, query_kp, db_img_kp);
@@ -230,6 +232,7 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
 
 
 /** @function retrieveShapes */
+/*
 int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
     int i = 0;              // Iter
     double dist = 0.0;      // Store the distance between shapes
@@ -243,10 +246,15 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
     Size size(800,600);
     resize(query, query, size);
 
-    // Canny(query, query, 100, 200, 3);
-    // adaptiveThreshold(query, query, 255, ADAPTIVE_THRESH_MEAN_C, 
-    //                       THRESH_BINARY_INV, 11, 2);
-    threshold(query, query, 0, 255, THRESH_BINARY_INV + THRESH_OTSU);
+    // Reduce noise using the Gaussian Blur
+    Size ksize(5,5);
+    // GaussianBlur(query, query, ksize, 0);
+
+    // Apply a threshold using Otsu 
+    // threshold(query, thresh_query, 127, 255, THRESH_BINARY);
+    // threshold(query, thresh_query, 0, 255, THRESH_BINARY + THRESH_OTSU);
+    // adaptiveThreshold(query, thresh_query, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 3, 2);
+    Canny(query, query, 100, 200, 3, true);
 
     namedWindow("Display Query", WINDOW_AUTOSIZE);
     imshow("Display Query", query);
@@ -269,12 +277,14 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
 		cvtColor(database_img, database_img, COLOR_BGR2GRAY);
         resize(database_img, database_img, size);
 
-        // Binarize the image using thresholding        
-        // Canny(database_img, database_img, 100, 200, 3);
-        // adaptiveThreshold(database_img, database_img, 255, ADAPTIVE_THRESH_MEAN_C, 
-        //                  THRESH_BINARY_INV, 11, 2);
-        
-        threshold(database_img, database_img, 0, 255, THRESH_BINARY_INV + THRESH_OTSU);
+        // Reduce noise
+        // GaussianBlur(database_img, database_img, ksize, 0);
+
+        // Apply the threshold
+        // threshold(database_img, thresh_db_img, 127, 255, THRESH_BINARY);
+        // threshold(database_img, thresh_db_img, 0, 255, THRESH_BINARY + THRESH_OTSU);
+        // adaptiveThreshold(database_img, thresh_db_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 3, 2);
+        Canny(database_img, database_img, 100, 200, 3, true);
 
         namedWindow("Display DB Img", WINDOW_AUTOSIZE);
         imshow("Display DB Img", database_img);
@@ -290,7 +300,100 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
 
     return 0;
 }
+*/
 
+int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
+    Mat db_img;         // Image read from database
+    Mat templ;          // Template
+    Mat resized;        // Resized database image
+    Mat res;            // Result of the templateMatching
+
+    double max_val = 0;      // Score of template matching. Higher the score. better the match
+    double best_match = 0;   // Value of the best match foun
+
+    // Resize query
+    Size size(800, 600);
+    resize(query, query, size);
+    
+    // Show query
+    imshow("Display Query", query);
+
+    // Select ROI
+    bool from_center = false;
+    Rect2d roi = selectROI("Display Query", query, from_center);
+    waitKey(0);
+
+    // Convert query to grayscale
+    cvtColor(query, query, COLOR_BGR2GRAY);
+
+    // Detect template edges
+    Canny(query, query, 50, 200, 3, true);
+    
+    // Crop query to select only the template
+    templ = query(roi);
+
+    // Find height and width of the template
+    int templ_height = templ.rows;
+    int templ_width  = templ.cols;
+
+    /* Show the edged template */
+    imshow("Display Query", templ);
+    waitKey(0);
+
+    // Read images from database
+    VideoCapture cap("./image_database/img_%3d.JPG"); // %3d means 00x.JPG notation
+	if (!cap.isOpened()) 							  // check if succeeded
+		return -1;
+
+    for (int i = 0; i < DATABASE_SIZE; i++) {
+        // Read next image from database
+        cap >> db_img;
+        if (!db_img.data) {
+            return -1;
+        }
+
+        // Resize image and convert to grayscale
+        resize(db_img, db_img, size);
+        cvtColor(db_img, db_img, COLOR_BGR2GRAY);
+        
+        // Detect edges of the resized image
+        Canny(db_img, db_img, 50, 200, 3, true);
+
+        // Initialize max_val and best_match
+        max_val     = 0;
+        best_match  = 0;
+
+        // Loop over the scales of the image
+        for (double scale = 2; scale >= 0.2; scale-=0.05) {
+            // Resize the image according to the scale, and keep track of the
+            // ratio of the resizing
+            resize(db_img, resized, Size(0,0), scale, scale);
+
+            // If resized image is smaller than the template break from the loop
+            if (resized.rows < templ_height || resized.cols < templ_width) {
+                break;
+            }
+            
+            // Apply template matching
+            matchTemplate(resized, templ, res, TM_CCORR_NORMED);        
+            minMaxLoc(res, 0, &max_val, NULL, NULL);
+
+            // If we have found a new max correlation, then update the best
+            // match variable and the currespondent index
+            if (max_val > best_match) {
+                // printf("max_val = %f\n", max_val);
+                best_match = max_val;
+                // best_match_idx = i;
+            }
+        }
+
+        // Insert the inverse of the best match value in the array of ditances
+        printf("Distance between query and image %3d: %f\n", i+1, 1/best_match);
+        shape_dist_array[i] = 1/best_match;
+    }
+
+    return 0;
+}
 
 /** @function retrieveColors */
 int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
