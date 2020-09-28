@@ -67,7 +67,6 @@ double getMedian(Mat channel) {
     return med;
 }
 
-
 /* @function findAvgDist */
 double findAvgDist(vector<cv::DMatch>& matches, int num_matches) {
     double dist;
@@ -256,73 +255,8 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
 
     return 0;
 }
-/*
-int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
-    Mat db_img;         // Image read from database
 
-    int lower_thresh, upper_thresh; // Variable for Canny threshold setting
-    double median = 0;              // Median value for a single-channel image
-    double sigma  = 0.33;           // Const value for thresholding
-
-    double dist = 0;
-
-    // Resize query
-    Size size(800, 600);
-    resize(query, query, size);
-    
-    // Convert query to grayscale
-    cvtColor(query, query, COLOR_BGR2GRAY);
-
-    // Get median of the gray value and use it for find good threshold value
-    median = getMedian(query);
-    lower_thresh = int(max(0.0, (1.0 - sigma) * median));
-    upper_thresh = int(min(255.0, (1.0 + sigma) * median));
-
-    // Detect template edges
-    Canny(query, query, lower_thresh, upper_thresh, 3, true);
-
-    // Show edged query
-    imshow("Display Query", query);
-    waitKey(0);
-
-    // Read images from database
-    VideoCapture cap("./image_database/img_%3d.JPG"); // %3d means 00x.JPG notation
-	if (!cap.isOpened()) 							  // check if succeeded
-		return -1;
-
-    for (int i = 0; i < DATABASE_SIZE; i++) {
-        // Read next image from database
-        cap >> db_img;
-        if (!db_img.data) {
-            return -1;
-        }
-
-        // Resize image and convert to grayscale
-        resize(db_img, db_img, size);
-        cvtColor(db_img, db_img, COLOR_BGR2GRAY);
-
-        // Get median of the gray value and use it for find good threshold value
-        median = getMedian(db_img);
-        lower_thresh = int(max(0.0, (1.0 - sigma) * median));
-        upper_thresh = int(min(255.0, (1.0 + sigma) * median));
-        
-        // Detect edges of the resized image
-        Canny(db_img, db_img, lower_thresh, upper_thresh, 3, true);
-
-        imshow("Display Query", db_img);
-        waitKey(2);
-        
-        // Apply template matching
-        dist = matchShapes(query, db_img, CONTOURS_MATCH_I3, 0);        
-
-        // Insert the inverse of the best match value in the array of ditances
-        printf("Distance between query and image %3d: %f\n", i+1, dist);
-        shape_dist_array[i] = dist;
-    }
-
-    return 0;
-}
-*/
+/* @function retrieveShapes */
 int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
     Mat db_img;         // Image read from database
     Mat templ;          // Template
@@ -419,9 +353,7 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
             // If we have found a new max correlation, then update the best
             // match variable and the currespondent index
             if (max_val > best_match) {
-                // printf("max_val = %f\n", max_val);
                 best_match = max_val;
-                // best_match_idx = i;
             }
         }
 
