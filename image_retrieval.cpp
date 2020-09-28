@@ -41,6 +41,33 @@ void showSimImages(vector<int>& sim_images_idx, double (&dist_array)[DATABASE_SI
     }
 }
 
+/* @function medianValue */
+// Find the median value of a single-channel image
+double getMedian(Mat channel) {
+    
+    double m = (channel.rows*channel.cols) / 2;
+    int bin = 0;
+    double med = -1.0;
+
+    int histSize = 256;
+    float range[] = { 0, 256 };
+    const float* histRange = { range };
+    bool uniform = true;
+    bool accumulate = false;
+    cv::Mat hist;
+    cv::calcHist( &channel, 1, 0, cv::Mat(), hist, 1, &histSize, &histRange, uniform, accumulate );
+
+    for ( int i = 0; i < histSize && med < 0.0; ++i )
+    {
+        bin += cvRound( hist.at< float >( i ) );
+        if ( bin > m && med < 0.0 )
+            med = i;
+    }
+
+    return med;
+}
+
+
 /* @function findAvgDist */
 double findAvgDist(vector<cv::DMatch>& matches, int num_matches) {
     double dist;
@@ -229,34 +256,32 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
 
     return 0;
 }
-
-
-/** @function retrieveShapes */
 /*
 int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
-    int i = 0;              // Iter
-    double dist = 0.0;      // Store the distance between shapes
-    Mat database_img;       // Store the images read from the database
-    Mat thresh_query, thresh_db_img;
+    Mat db_img;         // Image read from database
 
-    // Convert to grayscale
+    int lower_thresh, upper_thresh; // Variable for Canny threshold setting
+    double median = 0;              // Median value for a single-channel image
+    double sigma  = 0.33;           // Const value for thresholding
+
+    double dist = 0;
+
+    // Resize query
+    Size size(800, 600);
+    resize(query, query, size);
+    
+    // Convert query to grayscale
     cvtColor(query, query, COLOR_BGR2GRAY);
 
-    // Resize
-    Size size(800,600);
-    resize(query, query, size);
+    // Get median of the gray value and use it for find good threshold value
+    median = getMedian(query);
+    lower_thresh = int(max(0.0, (1.0 - sigma) * median));
+    upper_thresh = int(min(255.0, (1.0 + sigma) * median));
 
-    // Reduce noise using the Gaussian Blur
-    Size ksize(5,5);
-    // GaussianBlur(query, query, ksize, 0);
+    // Detect template edges
+    Canny(query, query, lower_thresh, upper_thresh, 3, true);
 
-    // Apply a threshold using Otsu 
-    // threshold(query, thresh_query, 127, 255, THRESH_BINARY);
-    // threshold(query, thresh_query, 0, 255, THRESH_BINARY + THRESH_OTSU);
-    // adaptiveThreshold(query, thresh_query, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 3, 2);
-    Canny(query, query, 100, 200, 3, true);
-
-    namedWindow("Display Query", WINDOW_AUTOSIZE);
+    // Show edged query
     imshow("Display Query", query);
     waitKey(0);
 
@@ -265,51 +290,51 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
 	if (!cap.isOpened()) 							  // check if succeeded
 		return -1;
 
-    // Scan the database
-    for (i = 0; i < DATABASE_SIZE; i++) {
+    for (int i = 0; i < DATABASE_SIZE; i++) {
         // Read next image from database
-        cap >> database_img;
-        if (!database_img.data) {
+        cap >> db_img;
+        if (!db_img.data) {
             return -1;
         }
+
+        // Resize image and convert to grayscale
+        resize(db_img, db_img, size);
+        cvtColor(db_img, db_img, COLOR_BGR2GRAY);
+
+        // Get median of the gray value and use it for find good threshold value
+        median = getMedian(db_img);
+        lower_thresh = int(max(0.0, (1.0 - sigma) * median));
+        upper_thresh = int(min(255.0, (1.0 + sigma) * median));
         
-        // Convert to grayscale and resize
-		cvtColor(database_img, database_img, COLOR_BGR2GRAY);
-        resize(database_img, database_img, size);
+        // Detect edges of the resized image
+        Canny(db_img, db_img, lower_thresh, upper_thresh, 3, true);
 
-        // Reduce noise
-        // GaussianBlur(database_img, database_img, ksize, 0);
-
-        // Apply the threshold
-        // threshold(database_img, thresh_db_img, 127, 255, THRESH_BINARY);
-        // threshold(database_img, thresh_db_img, 0, 255, THRESH_BINARY + THRESH_OTSU);
-        // adaptiveThreshold(database_img, thresh_db_img, 255, ADAPTIVE_THRESH_MEAN_C, THRESH_BINARY, 3, 2);
-        Canny(database_img, database_img, 100, 200, 3, true);
-
-        namedWindow("Display DB Img", WINDOW_AUTOSIZE);
-        imshow("Display DB Img", database_img);
+        imshow("Display Query", db_img);
         waitKey(2);
-
-        // Shape matching
-        dist = matchShapes(query, database_img, CONTOURS_MATCH_I2, 0.0);
-        printf("Shape distance from image %d: %f\n", i+1, dist);
         
-        // Insert distances in the array
+        // Apply template matching
+        dist = matchShapes(query, db_img, CONTOURS_MATCH_I3, 0);        
+
+        // Insert the inverse of the best match value in the array of ditances
+        printf("Distance between query and image %3d: %f\n", i+1, dist);
         shape_dist_array[i] = dist;
     }
 
     return 0;
 }
 */
-
 int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
     Mat db_img;         // Image read from database
     Mat templ;          // Template
     Mat resized;        // Resized database image
     Mat res;            // Result of the templateMatching
 
-    double max_val = 0;      // Score of template matching. Higher the score. better the match
-    double best_match = 0;   // Value of the best match foun
+    int lower_thresh, upper_thresh; // Variable for Canny threshold setting
+    double median = 0;              // Median value for a single-channel image
+    double sigma  = 0.33;           // Const value for thresholding
+
+    double max_val = 0;     // Score of template matching. Higher the score. better the match
+    double best_match = 0;  // Value of the best match foun
 
     // Resize query
     Size size(800, 600);
@@ -321,13 +346,18 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
     // Select ROI
     bool from_center = false;
     Rect2d roi = selectROI("Display Query", query, from_center);
-    waitKey(0);
+    waitKey(10);
 
     // Convert query to grayscale
     cvtColor(query, query, COLOR_BGR2GRAY);
 
+    // Get median of the gray value and use it for find good threshold value
+    median = getMedian(query);
+    lower_thresh = int(max(0.0, (1.0 - sigma) * median));
+    upper_thresh = int(min(255.0, (1.0 + sigma) * median));
+
     // Detect template edges
-    Canny(query, query, 50, 200, 3, true);
+    Canny(query, query, lower_thresh, upper_thresh, 3, true);
     
     // Crop query to select only the template
     templ = query(roi);
@@ -336,7 +366,7 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
     int templ_height = templ.rows;
     int templ_width  = templ.cols;
 
-    /* Show the edged template */
+    // Show the edged template
     imshow("Display Query", templ);
     waitKey(0);
 
@@ -355,9 +385,17 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
         // Resize image and convert to grayscale
         resize(db_img, db_img, size);
         cvtColor(db_img, db_img, COLOR_BGR2GRAY);
+
+        // Get median of the gray value and use it for find good threshold value
+        median = getMedian(db_img);
+        lower_thresh = int(max(0.0, (1.0 - sigma) * median));
+        upper_thresh = int(min(255.0, (1.0 + sigma) * median));
         
         // Detect edges of the resized image
-        Canny(db_img, db_img, 50, 200, 3, true);
+        Canny(db_img, db_img, lower_thresh, upper_thresh, 3, true);
+
+        imshow("Display Query", db_img);
+        waitKey(2);
 
         // Initialize max_val and best_match
         max_val     = 0;
@@ -393,7 +431,7 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
     }
 
     return 0;
-}
+} 
 
 /** @function retrieveColors */
 int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
