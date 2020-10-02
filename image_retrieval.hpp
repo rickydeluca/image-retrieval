@@ -15,7 +15,7 @@
 #include <opencv2/xfeatures2d.hpp>
 #include <opencv2/calib3d.hpp>
 
-#define DATABASE_SIZE   57
+#define DATABASE_SIZE   99
 #define N_SIM_IMGS      3
 
 void showSimImages(std::vector<int>& sim_images_idx, double (&dist_array)[DATABASE_SIZE], const int num_sim_images);

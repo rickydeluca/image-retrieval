@@ -328,9 +328,6 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
         // Detect edges of the resized image
         Canny(db_img, db_img, lower_thresh, upper_thresh, 3, true);
 
-        imshow("Display Query", db_img);
-        waitKey(2);
-
         // Initialize max_val and best_match
         max_val     = 0;
         best_match  = 0;
