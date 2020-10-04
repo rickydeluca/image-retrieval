@@ -16,7 +16,7 @@ void showSimImages(vector<int>& sim_images_idx, double (&dist_array)[DATABASE_SI
         sim_image_path = "";
 
         if (img_idx < 10) {
-            printf("img_00%d.JPG --> Dist: %f\n", img_idx, dist_array[img_idx-1]);
+            printf("img_00%d.JPG --> Match: %f%%\n", img_idx, dist_array[img_idx-1]);
 
             sim_image_path = "./image_database/img_00" + to_string(img_idx) + ".JPG";
             Mat sim_image = imread(sim_image_path, IMREAD_COLOR);
@@ -28,7 +28,7 @@ void showSimImages(vector<int>& sim_images_idx, double (&dist_array)[DATABASE_SI
         }
 
         else {
-            printf("img_0%d.JPG --> Dist: %f\n", img_idx, dist_array[img_idx-1]);
+            printf("img_0%d.JPG --> Match: %f%%\n", img_idx, dist_array[img_idx-1]);
 
 			sim_image_path = "./image_database/img_0" + to_string(img_idx) + ".JPG";
 			Mat sim_image = imread(sim_image_path, IMREAD_COLOR);
@@ -38,6 +38,16 @@ void showSimImages(vector<int>& sim_images_idx, double (&dist_array)[DATABASE_SI
     		imshow("Display Image", sim_image);
 			waitKey(0);
         }
+    }
+}
+
+/* @function normalizeArray */
+void normalizeArray(double array[], int size) {
+    double min_value = *(min_element(array, array + size));
+    double max_value = *(max_element(array, array + size));
+
+    for (int i = 0; i < size; i++) {
+        array[i] = ((array[i] - min_value) / (max_value - min_value)) * 100;   // Normalization formula
     }
 }
 
@@ -65,17 +75,6 @@ double getMedian(Mat channel) {
     }
 
     return med;
-}
-
-/* @function findAvgDist */
-double findAvgDist(vector<cv::DMatch>& matches, int num_matches) {
-    double dist;
-
-    for (int i = 0; i < 10; i++) {
-        dist += matches[i].distance;
-    }
-
-    return dist / num_matches;
 }
 
 /* @function findNumInliers */
@@ -179,9 +178,10 @@ int retrieveSiftDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE])
         // double dist = findAvgDist(good_matches, num_good_matches);
 
         printf("Num of SIFT matches with image %3d: %d\n", i+1, num_good_matches);
-        desc_dist_array[i] = 1 / (double) num_good_matches;
+        desc_dist_array[i] = (double) num_good_matches;
     }
 
+    normalizeArray(desc_dist_array, DATABASE_SIZE);
     return 0;
 }
 
@@ -250,9 +250,10 @@ int retrieveOrbDescriptors(Mat query, double (&desc_dist_array)[DATABASE_SIZE]) 
         
         printf("Num of ORB good matches with image %3d: %d\n", i+1, num_good_matches_refined);
         
-        desc_dist_array[i] = 1 / (double) num_good_matches_refined;
+        desc_dist_array[i] = (double) num_good_matches_refined;
     }
 
+    normalizeArray(desc_dist_array, DATABASE_SIZE);
     return 0;
 }
 
@@ -355,10 +356,11 @@ int retrieveShapes(Mat query, double (&shape_dist_array)[DATABASE_SIZE]) {
         }
 
         // Insert the inverse of the best match value in the array of ditances
-        printf("Distance between query and image %3d: %f\n", i+1, 1/best_match);
-        shape_dist_array[i] = 1/best_match;
+        printf("Match value with image %3d: %f\n", i+1, best_match);
+        shape_dist_array[i] = best_match;
     }
 
+    normalizeArray(shape_dist_array, DATABASE_SIZE);
     return 0;
 } 
 
@@ -419,11 +421,12 @@ int retrieveColors(Mat query, double (&color_dist_array)[DATABASE_SIZE]) {
 
         // Get global color space distance
 		dist = norm(dh + ds + dv, NORM_L2);
-		printf("Color distance from %3d: %f\n", i+1, dist);
+		printf("Color distance from %3d: %f\n", i+1, 100000/dist);
 
 		// insert found distance in distance_array
-		color_dist_array[i] = dist;
+		color_dist_array[i] = 100000/dist;
 	}
 
+    normalizeArray(color_dist_array, DATABASE_SIZE);
     return 0;
 }

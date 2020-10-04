@@ -20,9 +20,10 @@
 
 void showSimImages(std::vector<int>& sim_images_idx, double (&dist_array)[DATABASE_SIZE], const int num_sim_images);
 
+void normalizeArray(double array[], int size);
+
 double getMedian(cv::Mat channel);
 
-double findAvgDist(std::vector<cv::DMatch>& matches, int num_matches);
 
 int findNumInliers(std::vector<cv::DMatch>& matches, std::vector<cv::KeyPoint>& query_kp, std::vector<cv::KeyPoint>& db_img_kp);
 

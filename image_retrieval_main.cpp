@@ -6,7 +6,6 @@ using namespace std;
 // Global variables
 double dist_array[DATABASE_SIZE]        = {0};      // Store the computed distance between images
 double sorted_array[DATABASE_SIZE]      = {0};      // The dist_array sorted
-double normalized_array[DATABASE_SIZE]  = {0};      // The dist_array normalized
 int desc_idx_array[DATABASE_SIZE]       = {0};      // Image indexes of the most similar descriptors
 int color_shape_idx_array[N_SIM_IMGS]   = {0};      // Image indexes of the most similar colors histograms or shapes
 
@@ -19,12 +18,14 @@ int main (int argc, char** argv) {
             "\t1 - Color histogram\n"
             "\t2 - Shapes distance\n"
             "\t3 - ORB descriptors\n"
-            "\t4 - SIFT descriptors\n\n");
+            "\t4 - SIFT descriptors\n"
+            "\t5 - SIFT + ORB\n"
+            "\t6 - SIFT + Color\n\n");
     
     scanf("%d", &retrieval_method);
 
-    if (retrieval_method < 1 || retrieval_method > 4 ) {
-        cout << "Plese insert a number between 1 and 4";
+    if (retrieval_method < 1 || retrieval_method > 6 ) {
+        cout << "Plese insert a number between 1 and 6";
         return 0;
     }
 
@@ -81,7 +82,7 @@ int main (int argc, char** argv) {
     }
 
     // Compute SIFT descriptor distance
-    else {
+    else if (retrieval_method == 4) {
         ret = retrieveSiftDescriptors(query, dist_array);
         if (ret < 0) {
             printf("ERROR: Cannot retrieve descriptors.\n");
@@ -91,12 +92,59 @@ int main (int argc, char** argv) {
         printf("\n");
     }
 
+    // SIFT + ORB
+    else if (retrieval_method == 5) {
+        double sift_array[DATABASE_SIZE] = {0};
+        double orb_array[DATABASE_SIZE]  = {0};
+
+        ret = retrieveSiftDescriptors(query, sift_array);
+        if (ret < 0) {
+            printf("ERROR: Cannot retrieve SIFT descriptors.\n");
+            return -1;
+        }
+
+        ret = retrieveOrbDescriptors(query, orb_array);
+        if (ret < 0) {
+            printf("ERROR: Cannot retrieve ORB descriptors.\n");
+            return -1;
+        }
+
+        for (int i = 0; i < DATABASE_SIZE; i++) {
+            dist_array[i] = 0.2*sift_array[i] + 0.8*orb_array[i];
+        }
+
+        printf("\n");
+    }
+
+    // SIFT + Color
+    else {
+        double sift_array[DATABASE_SIZE]    = {0};
+        double color_array[DATABASE_SIZE]   = {0};
+
+        ret = retrieveSiftDescriptors(query, sift_array);
+        if (ret < 0) {
+            printf("ERROR: Cannot retrieve SIFT descriptors.\n");
+            return -1;
+        }
+
+        ret = retrieveColors(query, color_array);
+        if (ret < 0) {
+            printf("ERROR: Cannot retrieve ORB descriptors.\n");
+            return -1;
+        }
+
+        for (int i = 0; i < DATABASE_SIZE; i++) {
+            dist_array[i] = 0.6*sift_array[i] + 0.4*color_array[i];
+        }
+
+        printf("\n");
+    }
     
-    // Sort the distance array
+    // Sort the distance array in descending order. Higer value, higher match
     memcpy(sorted_array, dist_array, sizeof(double)*DATABASE_SIZE);
 
     int n = sizeof(sorted_array) / sizeof(sorted_array[0]);
-    sort(sorted_array, sorted_array + n);
+    sort(sorted_array, sorted_array + n, greater<double>());
         
     // Find most similiar image indexes
     vector<int> sim_images_idx;
@@ -112,7 +160,7 @@ int main (int argc, char** argv) {
     showSimImages(sim_images_idx, dist_array, N_SIM_IMGS);
     sim_images_idx.clear();
 
-    // Normalize dist_array and print it on file
+    // Print the normalized distance array values on file
     FILE *fp;
 
     if ((fp = fopen("data.txt", "wt")) == NULL) {
@@ -121,19 +169,8 @@ int main (int argc, char** argv) {
     }
 
     for (int i = 0; i < DATABASE_SIZE; i++) {
-        dist_array[i] = 1 / dist_array[i];
+        fprintf(fp, "%f, ", dist_array[i]);
     }
-
-    double min_dist = *(min_element(dist_array, dist_array + DATABASE_SIZE));
-    double max_dist = *(max_element(dist_array, dist_array + DATABASE_SIZE));
-
-    for (int i = 0; i < DATABASE_SIZE - 1; i++) {
-        normalized_array[i] = ((dist_array[i] - min_dist) / (max_dist - min_dist)) * 100;   // Normalization formula
-        fprintf(fp, "%f, ", normalized_array[i]);
-    }
-
-    normalized_array[DATABASE_SIZE] = ((dist_array[DATABASE_SIZE] - min_dist) / (max_dist - min_dist)) * 100;
-    fprintf(fp, "%f", normalized_array[DATABASE_SIZE]);
 
     fclose(fp);
 
